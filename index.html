@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quick Commerce Rider App</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="brand-panel">
+        <div class="app-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" role="img">
+            <rect width="48" height="48" rx="14"></rect>
+            <path d="M13 29h14l3-11h-9l-2-5h-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+            <circle cx="18" cy="34" r="3"></circle>
+            <circle cx="30" cy="34" r="3"></circle>
+            <path d="M33 17h5l-2 7h-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </div>
+        <h1>Quick Commerce<br><span>Rider App</span></h1>
+        <p>Sixteen connected delivery screens with login, OTP, order handling, navigation, earnings, profile, documents, settings, and support flows.</p>
+        <div class="feature-list">
+          <div><span data-icon="spark"></span>Clean modern UI</div>
+          <div><span data-icon="route"></span>Delivery workflow</div>
+          <div><span data-icon="bell"></span>Live order popup</div>
+          <div><span data-icon="moon"></span>Light and dark mode</div>
+          <div><span data-icon="edit"></span>Editable app state</div>
+        </div>
+        <div class="rider-art" aria-hidden="true">
+          <div class="sun"></div>
+          <div class="box"></div>
+          <div class="head"></div>
+          <div class="body"></div>
+          <div class="scooter"></div>
+          <div class="wheel left"></div>
+          <div class="wheel right"></div>
+        </div>
+      </aside>
+
+      <section class="phone-wrap" aria-label="Rider app preview">
+        <div class="phone">
+          <div class="statusbar">
+            <span>9:41</span>
+            <span class="status-icons">▰ ▰ ◖</span>
+          </div>
+          <div id="screen" class="screen"></div>
+        </div>
+      </section>
+
+      <nav class="screen-rail" aria-label="All app screens">
+        <button class="rail-btn active" data-screen="splash">1. Splash</button>
+        <button class="rail-btn" data-screen="login">2. Login</button>
+        <button class="rail-btn" data-screen="otp">3. OTP</button>
+        <button class="rail-btn" data-screen="dashboard">4. Home</button>
+        <button class="rail-btn" data-screen="orderPopup">5. New Order</button>
+        <button class="rail-btn" data-screen="map">6. Map</button>
+        <button class="rail-btn" data-screen="details">7. Details</button>
+        <button class="rail-btn" data-screen="pickup">8. Pickup</button>
+        <button class="rail-btn" data-screen="drop">9. Drop</button>
+        <button class="rail-btn" data-screen="earnings">10. Earnings</button>
+        <button class="rail-btn" data-screen="orders">11. Orders</button>
+        <button class="rail-btn" data-screen="profile">12. Profile</button>
+        <button class="rail-btn" data-screen="vehicle">13. Vehicle</button>
+        <button class="rail-btn" data-screen="documents">14. Docs</button>
+        <button class="rail-btn" data-screen="settings">15. Settings</button>
+        <button class="rail-btn" data-screen="support">16. Support</button>
+      </nav>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
