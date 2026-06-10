@@ -81,7 +81,7 @@ Open `admin_panel/index.html` or host it behind an authenticated admin domain.
 
 Before release, wire real providers:
 
-- Firebase Auth for OTP.
+- Twilio Verify for production OTP delivery and verification.
 - Firebase Cloud Messaging for push notifications.
 - Google Maps SDK/API keys.
 - AWS S3 for document uploads.

@@ -23,6 +23,14 @@
 6. Enable autoscaling on CPU, memory, and request count.
 7. Attach WAF and rate-limit rules.
 
+## Twilio OTP
+
+1. Create a Twilio Verify Service.
+2. Set `OTP_PROVIDER=twilio`.
+3. Set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_VERIFY_SERVICE_SID`.
+4. Keep `TWILIO_AUTH_TOKEN` in AWS Secrets Manager or another managed secret store.
+5. Use Twilio Verify fraud guard, country allowlists, and delivery analytics.
+
 ## Flutter Release
 
 1. Configure bundle IDs and app icons.

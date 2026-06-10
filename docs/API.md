@@ -17,8 +17,11 @@ Request:
 Response:
 
 ```json
-{ "message": "OTP_SENT" }
+{ "message": "OTP_SENT", "provider": "twilio", "channel": "sms" }
 ```
+
+Production OTP is delivered through Twilio Verify. Development can return `devOtp`
+when `OTP_PROVIDER` is not `twilio` or Twilio credentials are intentionally absent.
 
 ### POST `/verify-otp`
 

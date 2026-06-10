@@ -1,6 +1,6 @@
 # Security Best Practices
 
-- Use Firebase OTP or telecom-grade OTP provider in production.
+- Use Twilio Verify for production OTP and enable fraud guard, country allowlists, and rate limits.
 - Store JWT in Flutter secure storage, never plain shared preferences.
 - Rotate JWT signing keys and use short access-token expiry with refresh tokens.
 - Rate-limit OTP, login, resend, and support endpoints.

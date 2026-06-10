@@ -9,4 +9,11 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET || "dev-only-secret",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
   otpTtlSeconds: Number(process.env.OTP_TTL_SECONDS || 300),
+  otpProvider: process.env.OTP_PROVIDER || "dev",
+  twilio: {
+    accountSid: process.env.TWILIO_ACCOUNT_SID,
+    authToken: process.env.TWILIO_AUTH_TOKEN,
+    verifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID,
+    channel: process.env.TWILIO_OTP_CHANNEL || "sms",
+  },
 };
