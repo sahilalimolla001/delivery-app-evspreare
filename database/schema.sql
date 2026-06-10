@@ -156,9 +156,22 @@ CREATE TABLE withdrawals (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE audit_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  actor_user_id UUID REFERENCES users(id),
+  action VARCHAR(80) NOT NULL,
+  entity_type VARCHAR(80) NOT NULL,
+  entity_id UUID,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  request_id VARCHAR(80),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX idx_riders_online ON riders(online_status, approval_status);
 CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_locations_rider_created ON locations(rider_id, created_at DESC);
 CREATE INDEX idx_locations_order_created ON locations(order_id, created_at DESC);
 CREATE INDEX idx_stores_location ON stores USING GIST(location);
 CREATE INDEX idx_customers_location ON customers USING GIST(location);
+CREATE INDEX idx_audit_logs_entity ON audit_logs(entity_type, entity_id, created_at DESC);
+CREATE INDEX idx_audit_logs_actor ON audit_logs(actor_user_id, created_at DESC);

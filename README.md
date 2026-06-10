@@ -59,6 +59,17 @@ cp .env.example .env
 npm run dev
 ```
 
+## Docker Quick Start
+
+```bash
+docker compose up --build
+```
+
+API:
+
+- Liveness: `http://localhost:8080/health`
+- Readiness: `http://localhost:8080/ready`
+
 ## Database Quick Start
 
 ```bash
@@ -89,3 +100,5 @@ Before release, wire real providers:
 - Managed PostgreSQL with read replicas and backups.
 - Redis for order assignment locks and location cache.
 - Observability with OpenTelemetry, CloudWatch/Datadog, Sentry, and structured logs.
+
+See [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md) before launch.

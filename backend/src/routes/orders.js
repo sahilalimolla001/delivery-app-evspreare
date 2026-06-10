@@ -2,6 +2,7 @@ import express from "express";
 import Joi from "joi";
 import { query } from "../db.js";
 import { validate } from "../middleware/validate.js";
+import { auditLog } from "../services/auditService.js";
 import { assignOrderToRider } from "../services/orderAssignmentService.js";
 
 export const ordersRouter = express.Router();
@@ -27,6 +28,13 @@ ordersRouter.post("/accept-order", validate(Joi.object({
   const rider = await getRider(req.auth.sub);
   const order = await assignOrderToRider({ orderId: req.body.orderId, riderId: rider.id });
   if (!order) return res.status(409).json({ error: "ORDER_NOT_AVAILABLE" });
+  await auditLog({
+    actorUserId: req.auth.sub,
+    action: "ORDER_ACCEPTED",
+    entityType: "ORDER",
+    entityId: req.body.orderId,
+    requestId: req.requestId,
+  });
   res.json({ order });
 });
 
@@ -34,6 +42,14 @@ ordersRouter.post("/reject-order", validate(Joi.object({
   orderId: Joi.string().uuid().required(),
   reason: Joi.string().max(180).optional(),
 })), async (_req, res) => {
+  await auditLog({
+    actorUserId: _req.auth.sub,
+    action: "ORDER_REJECTED",
+    entityType: "ORDER",
+    entityId: _req.body.orderId,
+    metadata: { reason: _req.body.reason || null },
+    requestId: _req.requestId,
+  });
   res.json({ message: "ORDER_PASSED_TO_NEXT_RIDER" });
 });
 
@@ -48,6 +64,14 @@ ordersRouter.post("/pickup-order", validate(Joi.object({
      RETURNING *`,
     [req.body.orderId],
   );
+  await auditLog({
+    actorUserId: req.auth.sub,
+    action: "ORDER_PICKED_UP",
+    entityType: "ORDER",
+    entityId: req.body.orderId,
+    metadata: { latitude: req.body.latitude, longitude: req.body.longitude },
+    requestId: req.requestId,
+  });
   res.json({ order: rows[0] });
 });
 
@@ -63,6 +87,14 @@ ordersRouter.post("/deliver-order", validate(Joi.object({
      RETURNING *`,
     [req.body.orderId],
   );
+  await auditLog({
+    actorUserId: req.auth.sub,
+    action: "ORDER_DELIVERED",
+    entityType: "ORDER",
+    entityId: req.body.orderId,
+    metadata: { latitude: req.body.latitude, longitude: req.body.longitude },
+    requestId: req.requestId,
+  });
   res.json({ order: rows[0], otpVerified: true });
 });
 

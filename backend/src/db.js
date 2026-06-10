@@ -1,5 +1,6 @@
 import pg from "pg";
 import { config } from "./config.js";
+import { logger } from "./logger.js";
 
 const { Pool } = pg;
 
@@ -15,7 +16,12 @@ export async function query(text, params = []) {
   const result = await pool.query(text, params);
   const duration = Date.now() - start;
   if (duration > 500) {
-    console.warn("slow_query", { duration, text });
+    logger.warn("slow_query", { duration, text });
   }
   return result;
+}
+
+export async function readinessCheck() {
+  const result = await query("SELECT 1 AS ok");
+  return result.rows[0]?.ok === 1;
 }

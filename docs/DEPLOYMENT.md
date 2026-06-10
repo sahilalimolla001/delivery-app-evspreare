@@ -23,6 +23,17 @@
 6. Enable autoscaling on CPU, memory, and request count.
 7. Attach WAF and rate-limit rules.
 
+Health checks:
+
+- Liveness path: `/health`
+- Readiness path: `/ready`
+
+Container build:
+
+```bash
+docker build -t quick-commerce-rider-api ./backend
+```
+
 ## Twilio OTP
 
 1. Create a Twilio Verify Service.
