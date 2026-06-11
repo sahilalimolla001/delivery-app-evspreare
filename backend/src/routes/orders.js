@@ -27,7 +27,16 @@ ordersRouter.post("/accept-order", validate(Joi.object({
   orderId: Joi.string().uuid().required(),
 })), async (req, res) => {
   const rider = await getRider(req.auth.sub);
-  const order = await assignOrderToRider({ orderId: req.body.orderId, riderId: rider.id });
+  const { rows } = await query(
+    `UPDATE orders
+     SET status = 'GOING_TO_STORE', updated_at = now()
+     WHERE id = $1
+       AND rider_id = $2
+       AND status = 'ASSIGNED'
+     RETURNING *`,
+    [req.body.orderId, rider.id],
+  );
+  const order = rows[0];
   if (!order) return res.status(409).json({ error: "ORDER_NOT_AVAILABLE" });
   await auditLog({
     actorUserId: req.auth.sub,
@@ -42,16 +51,27 @@ ordersRouter.post("/accept-order", validate(Joi.object({
 ordersRouter.post("/reject-order", validate(Joi.object({
   orderId: Joi.string().uuid().required(),
   reason: Joi.string().max(180).optional(),
-})), async (_req, res) => {
+})), async (req, res) => {
+  const rider = await getRider(req.auth.sub);
+  const { rows } = await query(
+    `UPDATE orders
+     SET rider_id = NULL, status = 'PENDING', assigned_at = NULL, updated_at = now()
+     WHERE id = $1
+       AND rider_id = $2
+       AND status = 'ASSIGNED'
+     RETURNING *`,
+    [req.body.orderId, rider.id],
+  );
+  if (!rows[0]) return res.status(409).json({ error: "ORDER_NOT_AVAILABLE" });
   await auditLog({
-    actorUserId: _req.auth.sub,
+    actorUserId: req.auth.sub,
     action: "ORDER_REJECTED",
     entityType: "ORDER",
-    entityId: _req.body.orderId,
-    metadata: { reason: _req.body.reason || null },
-    requestId: _req.requestId,
+    entityId: req.body.orderId,
+    metadata: { reason: req.body.reason || null },
+    requestId: req.requestId,
   });
-  res.json({ message: "ORDER_PASSED_TO_NEXT_RIDER" });
+  res.json({ message: "ORDER_PASSED_TO_NEXT_RIDER", order: rows[0] });
 });
 
 ordersRouter.post("/pickup-order", validate(Joi.object({
@@ -59,12 +79,16 @@ ordersRouter.post("/pickup-order", validate(Joi.object({
   latitude: Joi.number().required(),
   longitude: Joi.number().required(),
 })), async (req, res) => {
+  const rider = await getRider(req.auth.sub);
   const { rows } = await query(
     `UPDATE orders SET status = 'PICKED_UP', picked_up_at = now(), updated_at = now()
-     WHERE id = $1 AND status IN ('ARRIVED_STORE', 'GOING_TO_STORE', 'ASSIGNED')
+     WHERE id = $1
+       AND rider_id = $2
+       AND status IN ('ARRIVED_STORE', 'GOING_TO_STORE', 'ASSIGNED')
      RETURNING *`,
-    [req.body.orderId],
+    [req.body.orderId, rider.id],
   );
+  if (!rows[0]) return res.status(409).json({ error: "ORDER_NOT_AVAILABLE" });
   await auditLog({
     actorUserId: req.auth.sub,
     action: "ORDER_PICKED_UP",
@@ -82,12 +106,16 @@ ordersRouter.post("/deliver-order", validate(Joi.object({
   latitude: Joi.number().required(),
   longitude: Joi.number().required(),
 })), async (req, res) => {
+  const rider = await getRider(req.auth.sub);
   const { rows } = await query(
     `UPDATE orders SET status = 'DELIVERED', delivered_at = now(), updated_at = now()
-     WHERE id = $1 AND status IN ('ARRIVED_CUSTOMER', 'GOING_TO_CUSTOMER', 'PICKED_UP')
+     WHERE id = $1
+       AND rider_id = $2
+       AND status IN ('ARRIVED_CUSTOMER', 'GOING_TO_CUSTOMER', 'PICKED_UP', 'GOING_TO_STORE')
      RETURNING *`,
-    [req.body.orderId],
+    [req.body.orderId, rider.id],
   );
+  if (!rows[0]) return res.status(409).json({ error: "ORDER_NOT_AVAILABLE" });
   await auditLog({
     actorUserId: req.auth.sub,
     action: "ORDER_DELIVERED",
@@ -96,10 +124,24 @@ ordersRouter.post("/deliver-order", validate(Joi.object({
     metadata: { latitude: req.body.latitude, longitude: req.body.longitude },
     requestId: req.requestId,
   });
-  res.json({ order: rows[0], otpVerified: true });
+  const nextOrder = await assignNextPendingOrder(rider.id);
+  res.json({ order: rows[0], otpVerified: true, nextOrder });
 });
 
 async function getRider(userId) {
   const { rows } = await query("SELECT * FROM riders WHERE user_id = $1", [userId]);
   return rows[0];
+}
+
+async function assignNextPendingOrder(riderId) {
+  const { rows } = await query(
+    `SELECT id
+     FROM orders
+     WHERE status = 'PENDING'
+       AND rider_id IS NULL
+     ORDER BY created_at ASC
+     LIMIT 1`,
+  );
+  if (!rows[0]) return null;
+  return assignOrderToRider({ orderId: rows[0].id, riderId });
 }

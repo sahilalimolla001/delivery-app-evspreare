@@ -23,6 +23,10 @@ const state = {
   ordersTab: "completed",
 };
 
+let ringAudioContext = null;
+let ringTimer = null;
+let ringingOrderId = null;
+
 const ERROR_MESSAGES = {
   OTP_RATE_LIMITED: "Too many OTP attempts. Please wait and try again.",
   OTP_PROVIDER_NOT_CONFIGURED: "OTP service is not configured yet.",
@@ -187,6 +191,49 @@ function clearPendingApproval() {
   localStorage.removeItem("pendingApprovalPhone");
 }
 
+function activeOrders() {
+  return state.orders.filter((order) => !["DELIVERED", "CANCELLED"].includes(order.status));
+}
+
+function pendingAssignedOrder() {
+  return state.orders.find((order) => order.status === "ASSIGNED") || null;
+}
+
+function playRingTone() {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+  ringAudioContext ||= new AudioContext();
+  const oscillator = ringAudioContext.createOscillator();
+  const gain = ringAudioContext.createGain();
+  oscillator.type = "sine";
+  oscillator.frequency.value = 880;
+  gain.gain.setValueAtTime(0.001, ringAudioContext.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.18, ringAudioContext.currentTime + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.001, ringAudioContext.currentTime + 0.45);
+  oscillator.connect(gain).connect(ringAudioContext.destination);
+  oscillator.start();
+  oscillator.stop(ringAudioContext.currentTime + 0.5);
+}
+
+function stopOrderRing() {
+  if (ringTimer) clearInterval(ringTimer);
+  ringTimer = null;
+  ringingOrderId = null;
+}
+
+function updateOrderRing() {
+  const order = pendingAssignedOrder();
+  if (!order) {
+    stopOrderRing();
+    return;
+  }
+  if (ringingOrderId === order.id) return;
+  stopOrderRing();
+  ringingOrderId = order.id;
+  playRingTone();
+  ringTimer = setInterval(playRingTone, 1200);
+}
+
 async function loadDashboardData() {
   if (!state.token) return;
   try {
@@ -238,7 +285,7 @@ function setScreen(name) {
 }
 
 function shell(content, opts = {}) {
-  return `<div class="app-screen ${opts.className || ""}">${content}</div>`;
+  return `<div class="app-screen ${opts.className || ""}">${content}${orderOfferModal()}</div>`;
 }
 
 function messageBlock() {
@@ -265,6 +312,32 @@ function tabbar(active) {
   return `<div class="tabbar">${tabs.map(([key, label]) => `
     <button class="${active === key ? "active" : ""}" data-go="${key}"><b>${label[0]}</b>${label}</button>
   `).join("")}</div>`;
+}
+
+function orderOfferModal() {
+  const order = pendingAssignedOrder();
+  if (!order || !state.token || state.pendingApproval) return "";
+  return `
+    <div class="modal-dim order-offer">
+      <div class="modal">
+        <div class="modal-head">
+          <div>
+            <span class="ring-pill">Ringing</span>
+            <h2>New Order</h2>
+            <p class="subtle">${order.public_id || order.id}</p>
+          </div>
+          <strong>${Number(order.total_payout || 0).toFixed(2)}</strong>
+        </div>
+        <div class="route-row"><span>A</span><div><b>${order.store_name || "Warehouse"}</b><small>${order.store_address || "Pickup location"}</small></div></div>
+        <div class="route-row"><span>B</span><div><b>${order.customer_name || "Customer"}</b><small>${order.customer_address || "Delivery address"}</small></div></div>
+        <div class="payout"><span>${order.payment_method || "Payment"}</span><strong>Rs ${Number(order.payment_collect_amount || 0).toFixed(2)}</strong></div>
+        <div class="offer-actions">
+          <button class="secondary" id="rejectOrder" data-order-id="${order.id}">Reject</button>
+          <button class="primary" id="acceptOrder" data-order-id="${order.id}">Accept</button>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function splash() {
@@ -338,6 +411,7 @@ function otp() {
 
 function dashboard() {
   const completed = state.orders.filter((order) => order.status === "DELIVERED").length;
+  const currentOrders = activeOrders();
   return shell(`
     <div class="topbar">
       <button class="icon-btn">Menu</button>
@@ -353,11 +427,11 @@ function dashboard() {
     <div class="metrics">
       <div class="metric"><strong>${String(completed).padStart(2, "0")}</strong><span>Completed</span></div>
       <div class="metric"><strong>${state.online ? "Live" : "Off"}</strong><span>Status</span></div>
-      <div class="metric"><strong>${state.orders.length}</strong><span>Assigned</span></div>
+      <div class="metric"><strong>${currentOrders.length}</strong><span>Current</span></div>
     </div>
     <div class="section-title">New Order</div>
     <div class="empty">
-      <div><div class="bag-icon">Box</div><strong>No new orders</strong><span>${state.online ? "Waiting for assignment" : "Go online to receive orders"}</span></div>
+      <div><div class="bag-icon">Box</div><strong>${currentOrders[0] ? "Order in progress" : "No new orders"}</strong><span>${currentOrders[0] ? currentOrders[0].status : (state.online ? "Waiting for assignment" : "Go online to receive orders")}</span></div>
     </div>
     ${tabbar("dashboard")}
   `);
@@ -388,11 +462,12 @@ function earnings() {
 }
 
 function orders() {
+  const currentOrders = activeOrders();
   return shell(`
     ${topbar("My Orders", "", "dashboard")}
-    ${state.orders.length ? `<div class="table">${state.orders.map((order) => `
+    ${currentOrders.length ? `<div class="table">${currentOrders.map((order) => `
       <div><span>${order.public_id || order.id}<br><small>${order.status}</small></span><b>Rs ${Number(order.total_payout || 0).toFixed(2)}</b></div>
-    `).join("")}</div>` : `<div class="empty"><div><strong>No orders yet</strong><span>Assigned orders will appear here</span></div></div>`}
+    `).join("")}</div>` : `<div class="empty"><div><strong>No current order</strong><span>Only your assigned live order will appear here</span></div></div>`}
     ${tabbar("orders")}
   `, { className: "scroll" });
 }
@@ -517,6 +592,7 @@ const views = {
 
 function render() {
   screen.innerHTML = views[state.current]();
+  updateOrderRing();
 }
 
 async function handleLoginContinue() {
@@ -647,7 +723,42 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  if (event.target.id === "acceptOrder") {
+    try {
+      stopOrderRing();
+      await apiRequest("/accept-order", {
+        method: "POST",
+        body: JSON.stringify({ orderId: event.target.dataset.orderId }),
+      });
+      await loadDashboardData();
+      state.current = "dashboard";
+      render();
+    } catch (error) {
+      state.message = error.message;
+      render();
+    }
+    return;
+  }
+
+  if (event.target.id === "rejectOrder") {
+    try {
+      stopOrderRing();
+      await apiRequest("/reject-order", {
+        method: "POST",
+        body: JSON.stringify({ orderId: event.target.dataset.orderId, reason: "Rejected by rider" }),
+      });
+      await loadDashboardData();
+      state.current = "dashboard";
+      render();
+    } catch (error) {
+      state.message = error.message;
+      render();
+    }
+    return;
+  }
+
   if (event.target.id === "logoutBtn") {
+    stopOrderRing();
     clearSession();
     setScreen("login");
   }
@@ -699,3 +810,9 @@ document.addEventListener("input", (event) => {
 railButtons.forEach((button) => button.addEventListener("click", () => setScreen(button.dataset.screen)));
 if (state.pendingApproval) state.current = "pendingApproval";
 render();
+
+setInterval(async () => {
+  if (!state.token || state.pendingApproval) return;
+  await loadDashboardData();
+  render();
+}, 15000);
