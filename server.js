@@ -5,11 +5,18 @@ const path = require('path');
 const publicDir = __dirname;
 const port = Number(process.env.PORT || 8000);
 const host = process.env.HOST || '0.0.0.0';
-const allowedFiles = new Set(['/index.html', '/app.js', '/styles.css']);
+const allowedFiles = new Set([
+  '/index.html',
+  '/app.js',
+  '/styles.css',
+  '/rider_app/assets/icon.png',
+  '/rider_app/assets/favicon.png',
+]);
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
+  '.png': 'image/png',
 };
 
 function send(res, statusCode, body, headers = {}) {

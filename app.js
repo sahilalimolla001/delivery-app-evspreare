@@ -4,6 +4,9 @@ const railButtons = document.querySelectorAll(".rail-btn");
 const state = {
   current: "splash",
   phone: "",
+  signupName: "",
+  signupVehicle: "",
+  registeredNumbers: ["9876543210"],
   otp: ["2", "4", "6", "8", "1", "3"],
   orderAccepted: false,
   dark: false,
@@ -69,10 +72,10 @@ function tabbar(active) {
 
 function splash() {
   return shell(`
-    <div class="hero-rider"></div>
+    <img class="splash-logo" src="rider_app/assets/icon.png" alt="evspeare delivery partner">
     <div class="status-copy">
-      <h2>Delivering<br>Happiness</h2>
-      <p>Fast deliveries. Happy customers.<br>Be the difference!</p>
+      <h2>evspeare</h2>
+      <p>Delivery Partner</p>
     </div>
     <button class="primary" data-go="${localStorage.getItem("riderLoggedIn") ? "dashboard" : "login"}">Start Riding</button>
     <div class="dots"><span></span><span></span><span></span></div>
@@ -82,26 +85,40 @@ function splash() {
 function login() {
   return shell(`
     <div style="padding-top:34px">
-      <h2>Welcome Back!</h2>
-      <p class="subtle">Login to continue delivering</p>
+      <h2>Login</h2>
+      <p class="subtle">Enter your registered mobile number to continue</p>
     </div>
-    <div class="welcome-asset"></div>
+    <img class="login-logo" src="rider_app/assets/icon.png" alt="evspeare">
     <label class="field"><b>+91</b><input id="phoneInput" inputmode="numeric" maxlength="10" placeholder="Enter mobile number" value="${state.phone}"></label>
     <button class="primary" id="continueLogin">Continue</button>
-    <div class="or">or</div>
-    <button class="secondary" data-go="dashboard">G&nbsp; Login with Google</button>
+    <div class="signup-spacer"></div>
+    <button class="secondary social-login" data-go="dashboard">Login with Google</button>
     <div style="height:10px"></div>
     <button class="secondary" data-go="dashboard">●&nbsp; Login with Apple</button>
-    <p class="bottom-note">New rider? <span class="tiny-link">Sign up</span></p>
+    <p class="bottom-note">New delivery partner? <span class="tiny-link" data-go="signup">Sign up for verification</span></p>
+  `);
+}
+
+function signup() {
+  return shell(`
+    ${topbar("", "", "login")}
+    <h2>Rider Signup</h2>
+    <p class="subtle">Create your delivery partner profile. Your account will remain pending until verification is approved.</p>
+    <label class="field single"><input id="signupName" placeholder="Full name" value="${state.signupName}"></label>
+    <label class="field"><b>+91</b><input id="signupPhone" inputmode="numeric" maxlength="10" placeholder="Mobile number" value="${state.phone}"></label>
+    <label class="field single"><input id="signupVehicle" placeholder="Vehicle number" value="${state.signupVehicle}"></label>
+    <button class="primary" id="submitSignup">Submit for verification</button>
+    <p class="bottom-note">Already signed up? <span class="tiny-link" data-go="login">Login</span></p>
   `);
 }
 
 function otp() {
-  const digits = Array.from({ length: 6 }, (_, index) => state.otp[index] || "");
+  const digits = state.otp.map((num) => num || "");
   return shell(`
     ${topbar("", "", "login")}
     <h2>Verify OTP</h2>
     <p class="subtle">We've sent a 6 digit code to<br><b style="color:#101828">+91 ${state.phone || "98765 43210"}</b> <span class="tiny-link" data-go="login">Change</span></p>
+    <div class="dev-otp"><span>Development OTP</span><b>246813</b></div>
     <div class="otp-row">${digits.map((num) => `<div class="otp-box">${num}</div>`).join("")}</div>
     <p class="subtle" style="text-align:center">Resend OTP in <span id="timer">00:25</span></p>
     <div class="keypad">
@@ -317,6 +334,7 @@ function support() {
 const views = {
   splash,
   login,
+  signup,
   otp,
   dashboard: () => dashboard(false),
   orderPopup: () => dashboard(true),
@@ -389,18 +407,39 @@ document.addEventListener("input", (event) => {
     state.phone = event.target.value.replace(/\D/g, "").slice(0, 10);
     event.target.value = state.phone;
   }
+  if (event.target.id === "signupPhone") {
+    state.phone = event.target.value.replace(/\D/g, "").slice(0, 10);
+    event.target.value = state.phone;
+  }
+  if (event.target.id === "signupName") state.signupName = event.target.value;
+  if (event.target.id === "signupVehicle") {
+    state.signupVehicle = event.target.value.toUpperCase();
+    event.target.value = state.signupVehicle;
+  }
 });
 
 document.addEventListener("click", (event) => {
   if (event.target.id === "continueLogin") {
     const valid = state.phone.length === 10;
     if (valid) {
+      if (!state.registeredNumbers.includes(state.phone)) {
+        setScreen("signup");
+        return;
+      }
       state.otp = [];
       setScreen("otp");
     } else {
       const field = document.querySelector(".field");
       field.style.borderColor = "var(--red)";
       field.querySelector("input").placeholder = "Enter a valid 10-digit number";
+    }
+  }
+  if (event.target.id === "submitSignup") {
+    const valid = state.signupName.trim().length >= 2 && state.phone.length === 10 && state.signupVehicle.trim().length >= 4;
+    if (valid) {
+      if (!state.registeredNumbers.includes(state.phone)) state.registeredNumbers.push(state.phone);
+      state.otp = [];
+      setScreen("otp");
     }
   }
 });
