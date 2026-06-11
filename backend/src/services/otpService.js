@@ -19,6 +19,12 @@ function twilioConfigured() {
   );
 }
 
+function mask(value) {
+  const current = String(value || "");
+  if (!current) return "";
+  return `${current.slice(0, 2)}...${current.slice(-4)}`;
+}
+
 function getTwilioClient() {
   if (!twilioConfigured()) {
     throw new Error("TWILIO_VERIFY_NOT_CONFIGURED");
@@ -89,6 +95,17 @@ export async function verifyOtp(phone, otp) {
     .create({ to: normalizedPhone, code: otp });
 
   return check.status === "approved";
+}
+
+export function twilioDiagnostics() {
+  return {
+    provider: config.otpProvider,
+    configured: twilioConfigured(),
+    accountSid: mask(config.twilio.accountSid),
+    verifyServiceSid: mask(config.twilio.verifyServiceSid),
+    verifyServicePrefix: config.twilio.verifyServiceSid?.slice(0, 2) || "",
+    channel: config.twilio.channel,
+  };
 }
 
 export { normalizePhone };

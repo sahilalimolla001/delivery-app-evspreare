@@ -3,6 +3,10 @@ import Joi from "joi";
 
 dotenv.config();
 
+function clean(value) {
+  return String(value || "").trim();
+}
+
 const schema = Joi.object({
   NODE_ENV: Joi.string().valid("development", "test", "production").default("development"),
   PORT: Joi.number().port().default(8080),
@@ -60,9 +64,9 @@ export const config = {
   otpTtlSeconds: env.OTP_TTL_SECONDS,
   otpProvider,
   twilio: {
-    accountSid: env.TWILIO_ACCOUNT_SID,
-    authToken: env.TWILIO_AUTH_TOKEN,
-    verifyServiceSid: env.TWILIO_VERIFY_SERVICE_SID,
-    channel: env.TWILIO_OTP_CHANNEL,
+    accountSid: clean(env.TWILIO_ACCOUNT_SID),
+    authToken: clean(env.TWILIO_AUTH_TOKEN),
+    verifyServiceSid: clean(env.TWILIO_VERIFY_SERVICE_SID),
+    channel: clean(env.TWILIO_OTP_CHANNEL || "sms"),
   },
 };

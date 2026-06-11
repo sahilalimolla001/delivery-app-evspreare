@@ -4,7 +4,7 @@ import rateLimit from "express-rate-limit";
 import { query } from "../db.js";
 import { signToken } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
-import { normalizePhone, sendOtp, verifyOtp } from "../services/otpService.js";
+import { normalizePhone, sendOtp, twilioDiagnostics, verifyOtp } from "../services/otpService.js";
 
 export const authRouter = express.Router();
 
@@ -36,10 +36,13 @@ authRouter.post("/send-otp", otpLimiter, validate(Joi.object({
       code: error.code,
       status: error.status,
       moreInfo: error.moreInfo,
+      twilio: twilioDiagnostics(),
     });
     return res.status(502).json({
       error: "OTP_DELIVERY_FAILED",
-      message: error.code
+      message: error.code === 20404
+        ? "Twilio Verify Service SID was not found for this Account SID. Check Railway env is using the same Twilio account and a VA... Verify SID."
+        : error.code
         ? `Twilio OTP failed (${error.code}). Check Twilio Verify settings.`
         : "Twilio OTP delivery failed.",
       twilioCode: error.code || null,
