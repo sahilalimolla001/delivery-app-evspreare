@@ -51,6 +51,10 @@ async function refreshData() {
   render();
 }
 
+setInterval(() => {
+  refreshData();
+}, 30000);
+
 function metric(label, value, note) {
   return `<article><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`;
 }

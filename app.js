@@ -232,6 +232,9 @@ function pendingApproval() {
       <h2 style="margin-top:18px">Waiting for approval</h2>
       <p class="subtle">Your rider registration is submitted. Admin approval is required before you can use the app.</p>
       <p class="subtle"><b style="color:#075DFF">${state.pendingPhone}</b></p>
+      ${messageBlock()}
+      <button class="primary" id="checkPendingApproval">${state.loading ? "Checking..." : "Check approval status"}</button>
+      <div style="height:10px"></div>
       <button class="secondary" id="changePendingPhone">Use another number</button>
     </div>
   `);
@@ -491,6 +494,31 @@ document.addEventListener("click", async (event) => {
     clearPendingApproval();
     clearSession();
     setScreen("login");
+  }
+
+  if (event.target.id === "checkPendingApproval") {
+    setLoading(true);
+    try {
+      const status = await apiRequest("/rider-status", {
+        method: "POST",
+        body: JSON.stringify({ phone: state.pendingPhone || phoneWithCountry() }),
+      });
+      if (status.canLogin) {
+        clearPendingApproval();
+        state.message = "Approved. Please login with OTP.";
+        setScreen("login");
+      } else {
+        state.message = "Still waiting for admin approval.";
+        state.current = "pendingApproval";
+        render();
+      }
+    } catch (error) {
+      state.message = error.message;
+      render();
+    } finally {
+      state.loading = false;
+      render();
+    }
   }
 });
 

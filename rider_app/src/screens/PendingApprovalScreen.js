@@ -9,7 +9,19 @@ import {
 import { useAuthStore } from '../stores/authStore';
 
 const PendingApprovalScreen = () => {
-  const { pendingPhone, clearPendingApproval } = useAuthStore();
+  const {
+    pendingPhone,
+    clearPendingApproval,
+    checkPendingApprovalStatus,
+    isLoading,
+    error,
+    clearError,
+  } = useAuthStore();
+
+  const handleUseAnother = async () => {
+    clearError();
+    await clearPendingApproval();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -22,7 +34,11 @@ const PendingApprovalScreen = () => {
           Your rider registration is submitted. Admin approval is required before you can use the app.
         </Text>
         <Text style={styles.phone}>{pendingPhone || ''}</Text>
-        <TouchableOpacity style={styles.secondaryButton} onPress={clearPendingApproval}>
+        {error ? <Text style={styles.statusText}>{error}</Text> : null}
+        <TouchableOpacity style={styles.primaryButton} onPress={checkPendingApprovalStatus} disabled={isLoading}>
+          <Text style={styles.primaryText}>{isLoading ? 'Checking...' : 'Check approval status'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButton} onPress={handleUseAnother}>
           <Text style={styles.secondaryText}>Use another number</Text>
         </TouchableOpacity>
       </View>
@@ -71,7 +87,26 @@ const styles = StyleSheet.create({
     color: '#075DFF',
     fontSize: 15,
     fontWeight: '800',
-    marginBottom: 28,
+    marginBottom: 18,
+  },
+  statusText: {
+    color: '#B54708',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  primaryButton: {
+    backgroundColor: '#075DFF',
+    borderRadius: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  primaryText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
   },
   secondaryButton: {
     borderWidth: 1,

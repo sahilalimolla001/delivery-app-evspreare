@@ -179,6 +179,30 @@ export const useAuthStore = create((set, get) => ({
     set({ pendingApproval: false, pendingPhone: null, signupDraft: null, error: null });
   },
 
+  checkPendingApprovalStatus: async () => {
+    const phone = get().pendingPhone;
+    if (!phone) return null;
+    set({ isLoading: true, error: null });
+    try {
+      const status = await get().checkRiderStatus(phone);
+      if (status.canLogin) {
+        await AsyncStorage.removeItem(PENDING_PHONE_KEY);
+        set({
+          isLoading: false,
+          pendingApproval: false,
+          pendingPhone: null,
+          error: 'Approved. Please login with OTP.',
+        });
+        return status;
+      }
+      set({ isLoading: false, error: 'Still waiting for admin approval.' });
+      return status;
+    } catch (error) {
+      set({ isLoading: false, error: error.message });
+      throw error;
+    }
+  },
+
   clearError: () => set({ error: null }),
   setError: (message) => set({ error: message }),
 
