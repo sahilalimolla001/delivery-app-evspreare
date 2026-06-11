@@ -198,6 +198,42 @@ async function importWarehouseOrder(rawPayload) {
   return orders[0];
 }
 
+export async function syncWarehouseOrders({ delivery = "all", statuses = "all" } = {}) {
+  const url = new URL("/api/integrations/delivery-orders", config.warehouse.apiUrl);
+  url.searchParams.set("delivery", delivery || "all");
+  url.searchParams.set("statuses", statuses || "all");
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${config.warehouse.integrationApiKey}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data.message || data.error || "WAREHOUSE_SYNC_FAILED");
+    error.status = response.status;
+    error.details = data;
+    throw error;
+  }
+
+  const imported = [];
+  const dispatched = [];
+  for (const warehouseOrder of data.orders || []) {
+    const order = await importWarehouseOrder(warehouseOrder);
+    const dispatch = await dispatchOrderToRider(order);
+    imported.push(dispatch.order);
+    if (dispatch.assigned) dispatched.push(dispatch.order.id);
+  }
+
+  return {
+    ok: true,
+    upstreamCount: Number(data.count ?? data.orders?.length ?? 0),
+    imported: imported.length,
+    dispatched: dispatched.length,
+    orders: imported,
+  };
+}
+
 externalOrdersRouter.post("/external/warehouse/orders", requireExternalOrderKey, async (req, res) => {
   try {
     const order = await importWarehouseOrder(req.body);
@@ -209,25 +245,17 @@ externalOrdersRouter.post("/external/warehouse/orders", requireExternalOrderKey,
 });
 
 externalOrdersRouter.post("/external/warehouse/sync", requireWarehouseConfig, async (req, res) => {
-  const url = new URL("/api/integrations/delivery-orders", config.warehouse.apiUrl);
-  url.searchParams.set("delivery", req.query.delivery || "all");
-  url.searchParams.set("statuses", req.query.statuses || "all");
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${config.warehouse.integrationApiKey}`,
-      "Content-Type": "application/json",
-    },
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) return res.status(response.status).json(data);
-
-  const imported = [];
-  const dispatched = [];
-  for (const warehouseOrder of data.orders || []) {
-    const order = await importWarehouseOrder(warehouseOrder);
-    const dispatch = await dispatchOrderToRider(order);
-    imported.push(dispatch.order);
-    if (dispatch.assigned) dispatched.push(dispatch.order.id);
+  try {
+    const result = await syncWarehouseOrders({
+      delivery: req.query.delivery,
+      statuses: req.query.statuses,
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(error.status || 500).json({
+      ok: false,
+      error: error.message,
+      details: error.details || null,
+    });
   }
-  res.json({ ok: true, imported: imported.length, dispatched: dispatched.length, orders: imported });
 });

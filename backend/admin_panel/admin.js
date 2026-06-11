@@ -7,6 +7,7 @@ let riders = [];
 let records = [];
 let dashboard = null;
 let errorMessage = '';
+let successMessage = '';
 
 async function apiRequest(path, options = {}) {
   const response = await fetch(path, {
@@ -29,6 +30,7 @@ async function loadRiders(status) {
 
 async function refreshData() {
   errorMessage = '';
+  successMessage = '';
   try {
     records = [];
     dashboard = null;
@@ -76,6 +78,10 @@ function emptyState(message) {
 
 function errorPanel() {
   return errorMessage ? `<p class="error">${errorMessage}</p>` : '';
+}
+
+function successPanel() {
+  return successMessage ? `<p class="success">${successMessage}</p>` : '';
 }
 
 function riderRows(data, actions = false) {
@@ -143,7 +149,7 @@ function renderApproval() {
 }
 
 function renderOrders() {
-  content.innerHTML = `${errorPanel()}<article class="panel"><h3>Orders</h3>${tableRows(
+  content.innerHTML = `${errorPanel()}${successPanel()}<article class="panel"><h3>Orders <button class="mini" id="syncWarehouseOrders">Pull Warehouse Orders</button></h3>${tableRows(
     ['Order', 'Warehouse', 'Customer', 'Payment', 'Rider', 'Status'],
     records.map((order) => `
       <tr>
@@ -291,6 +297,17 @@ document.addEventListener('click', async (event) => {
     return;
   }
   if (event.target.id === 'refreshBtn') await refreshData();
+  if (event.target.id === 'syncWarehouseOrders') {
+    try {
+      const result = await apiRequest('/api/admin/warehouse/sync', { method: 'POST' });
+      successMessage = `Pulled ${result.imported || 0} orders, dispatched ${result.dispatched || 0}.`;
+      records = (await apiRequest('/api/admin/orders')).orders || [];
+      render();
+    } catch (error) {
+      errorMessage = error.message;
+      render();
+    }
+  }
 });
 
 refreshData();

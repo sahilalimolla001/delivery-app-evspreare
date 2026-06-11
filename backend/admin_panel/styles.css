@@ -31,6 +31,7 @@ article { background: white; border: 1px solid var(--line); border-radius: 8px; 
 .config-panel label { display: grid; gap: 7px; margin-bottom: 12px; color: var(--muted); font-size: 13px; font-weight: 800; }
 .config-panel input { width: 100%; height: 40px; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; color: var(--ink); }
 .error { color: var(--red); font-weight: 800; }
+.success { color: var(--green); font-weight: 800; }
 .empty-state { min-height: 92px; display: grid; place-items: center; color: var(--muted); background: #f8fbff; border: 1px dashed var(--line); border-radius: 8px; }
 h3 { margin: 0 0 16px; }
 table { width: 100%; border-collapse: collapse; min-width: 720px; }

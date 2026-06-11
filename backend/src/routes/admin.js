@@ -1,6 +1,7 @@
 import express from "express";
 import { query } from "../db.js";
 import { auditLog } from "../services/auditService.js";
+import { syncWarehouseOrders } from "./externalOrders.js";
 
 export const adminRouter = express.Router();
 
@@ -72,6 +73,22 @@ adminRouter.get("/orders", async (_req, res) => {
      LIMIT 500`,
   );
   res.json({ orders: rows });
+});
+
+adminRouter.post("/warehouse/sync", async (req, res) => {
+  try {
+    const result = await syncWarehouseOrders({
+      delivery: req.query.delivery,
+      statuses: req.query.statuses,
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(error.status || 500).json({
+      ok: false,
+      error: error.message,
+      details: error.details || null,
+    });
+  }
 });
 
 adminRouter.get("/earnings", async (_req, res) => {
