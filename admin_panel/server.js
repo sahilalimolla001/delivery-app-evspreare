@@ -1,5 +1,6 @@
 const fs = require('fs');
 const http = require('http');
+const https = require('https');
 const path = require('path');
 
 const publicDir = __dirname;
@@ -17,6 +18,44 @@ function send(res, statusCode, body, headers = {}) {
   res.end(body);
 }
 
+function proxyAdminRequest(req, res, url) {
+  const apiBaseUrl = process.env.PUBLIC_API_BASE_URL || process.env.API_BASE_URL || process.env.BACKEND_URL || '';
+  const adminApiKey = process.env.ADMIN_API_KEY || '';
+
+  if (!apiBaseUrl || !adminApiKey) {
+    send(res, 500, JSON.stringify({ error: 'ADMIN_BACKEND_NOT_CONFIGURED' }), {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+    });
+    return;
+  }
+
+  const target = new URL(`/admin${url.pathname.replace('/api/admin', '')}${url.search}`, apiBaseUrl);
+  const client = target.protocol === 'https:' ? https : http;
+  const proxy = client.request(target, {
+    method: req.method,
+    headers: {
+      'Content-Type': req.headers['content-type'] || 'application/json',
+      'x-admin-key': adminApiKey,
+    },
+  }, (backendResponse) => {
+    res.writeHead(backendResponse.statusCode || 502, {
+      'Content-Type': backendResponse.headers['content-type'] || 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+    });
+    backendResponse.pipe(res);
+  });
+
+  proxy.on('error', () => {
+    send(res, 502, JSON.stringify({ error: 'ADMIN_BACKEND_REQUEST_FAILED' }), {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+    });
+  });
+
+  req.pipe(proxy);
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   if (url.pathname === '/health') {
@@ -24,9 +63,13 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (url.pathname.startsWith('/api/admin')) {
+    proxyAdminRequest(req, res, url);
+    return;
+  }
+
   if (url.pathname === '/config.js') {
-    const apiBaseUrl = process.env.PUBLIC_API_BASE_URL || process.env.API_BASE_URL || process.env.BACKEND_URL || '';
-    send(res, 200, `window.EVSPEARE_CONFIG = ${JSON.stringify({ apiBaseUrl })};`, {
+    send(res, 200, 'window.EVSPEARE_CONFIG = {};', {
       'Cache-Control': 'no-store',
       'Content-Type': 'application/javascript; charset=utf-8',
       'X-Content-Type-Options': 'nosniff',

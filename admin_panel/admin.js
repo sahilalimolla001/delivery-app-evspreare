@@ -6,24 +6,11 @@ let currentView = 'dashboard';
 let riders = [];
 let errorMessage = '';
 
-const config = {
-  apiBaseUrl: localStorage.getItem('adminApiBaseUrl') || window.EVSPEARE_CONFIG?.apiBaseUrl || '',
-  token: localStorage.getItem('adminToken') || '',
-};
-
-function apiUrl(path) {
-  return `${config.apiBaseUrl.replace(/\/$/, '')}${path}`;
-}
-
 async function apiRequest(path, options = {}) {
-  if (!config.apiBaseUrl || !config.token) {
-    throw new Error('Connect backend API and admin key first.');
-  }
-  const response = await fetch(apiUrl(path), {
+  const response = await fetch(path, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'x-admin-key': config.token,
       ...(options.headers || {}),
     },
   });
@@ -34,7 +21,7 @@ async function apiRequest(path, options = {}) {
 
 async function loadRiders(status) {
   const query = status ? `?status=${status}` : '';
-  const data = await apiRequest(`/admin/riders${query}`);
+  const data = await apiRequest(`/api/admin/riders${query}`);
   return data.riders || [];
 }
 
@@ -66,20 +53,12 @@ function isOnline(rider) {
   return false;
 }
 
-function configPanel() {
-  return `
-    <article class="panel config-panel">
-      <h3>Backend Connection</h3>
-      <label>API Base URL<input id="apiBaseUrl" placeholder="https://your-backend.up.railway.app" value="${config.apiBaseUrl}"></label>
-      <label>Admin API Key<input id="adminToken" placeholder="Same value as backend ADMIN_API_KEY" value="${config.token}"></label>
-      <button class="mini" id="saveConfig">Save & Refresh</button>
-      ${errorMessage ? `<p class="error">${errorMessage}</p>` : ''}
-    </article>
-  `;
-}
-
 function emptyState(message) {
   return `<div class="empty-state">${message}</div>`;
+}
+
+function errorPanel() {
+  return errorMessage ? `<p class="error">${errorMessage}</p>` : '';
 }
 
 function riderRows(data, actions = false) {
@@ -106,7 +85,7 @@ function renderDashboard() {
   const pending = riders.filter((rider) => rider.approval_status === 'PENDING');
   const approved = riders.filter((rider) => rider.approval_status === 'APPROVED');
   content.innerHTML = `
-    ${configPanel()}
+    ${errorPanel()}
     <section class="metrics">
       ${metric('Online Riders', online.length, 'Visible to dispatch')}
       ${metric('Registered Riders', riders.length, 'From backend database')}
@@ -121,15 +100,15 @@ function renderDashboard() {
 }
 
 function renderOnline() {
-  content.innerHTML = `${configPanel()}<article class="panel"><h3>Online Riders</h3>${riderRows(riders)}</article>`;
+  content.innerHTML = `${errorPanel()}<article class="panel"><h3>Online Riders</h3>${riderRows(riders)}</article>`;
 }
 
 function renderRegistered() {
-  content.innerHTML = `${configPanel()}<article class="panel"><h3>Registered Riders</h3>${riderRows(riders, true)}</article>`;
+  content.innerHTML = `${errorPanel()}<article class="panel"><h3>Registered Riders</h3>${riderRows(riders, true)}</article>`;
 }
 
 function renderApproval() {
-  content.innerHTML = `${configPanel()}<article class="panel"><h3>Rider Registration Approval</h3>${riderRows(riders, true)}</article>`;
+  content.innerHTML = `${errorPanel()}<article class="panel"><h3>Rider Registration Approval</h3>${riderRows(riders, true)}</article>`;
 }
 
 function render() {
@@ -154,18 +133,10 @@ document.addEventListener('click', async (event) => {
     await refreshData();
     return;
   }
-  if (event.target.id === 'saveConfig') {
-    config.apiBaseUrl = document.querySelector('#apiBaseUrl').value.trim();
-    config.token = document.querySelector('#adminToken').value.trim();
-    localStorage.setItem('adminApiBaseUrl', config.apiBaseUrl);
-    localStorage.setItem('adminToken', config.token);
-    await refreshData();
-    return;
-  }
   const approve = event.target.closest('[data-approve]');
   if (approve) {
     try {
-      await apiRequest(`/admin/riders/${approve.dataset.approve}/approve`, { method: 'POST' });
+      await apiRequest(`/api/admin/riders/${approve.dataset.approve}/approve`, { method: 'POST' });
       await refreshData();
     } catch (error) {
       errorMessage = error.message;
@@ -176,7 +147,7 @@ document.addEventListener('click', async (event) => {
   const suspend = event.target.closest('[data-suspend]');
   if (suspend) {
     try {
-      await apiRequest(`/admin/riders/${suspend.dataset.suspend}/suspend`, { method: 'POST' });
+      await apiRequest(`/api/admin/riders/${suspend.dataset.suspend}/suspend`, { method: 'POST' });
       await refreshData();
     } catch (error) {
       errorMessage = error.message;

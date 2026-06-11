@@ -21,6 +21,7 @@ Rider web preview service:
 
 Admin panel service:
 - `PUBLIC_API_BASE_URL=https://your-backend-service.up.railway.app`
+- `ADMIN_API_KEY` same value as the backend service `ADMIN_API_KEY`
 
 Database setup:
 - From the backend service shell, run `npm run migrate` once after attaching Railway Postgres.
