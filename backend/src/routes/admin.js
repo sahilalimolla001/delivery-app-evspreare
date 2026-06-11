@@ -4,7 +4,7 @@ import { auditLog } from "../services/auditService.js";
 
 export const adminRouter = express.Router();
 
-adminRouter.get("/admin/dashboard", async (_req, res) => {
+adminRouter.get("/dashboard", async (_req, res) => {
   const [orders, riders, revenue] = await Promise.all([
     query("SELECT status, count(*)::int FROM orders GROUP BY status"),
     query("SELECT online_status, approval_status, count(*)::int FROM riders GROUP BY online_status, approval_status"),
@@ -13,7 +13,7 @@ adminRouter.get("/admin/dashboard", async (_req, res) => {
   res.json({ orders: orders.rows, riders: riders.rows, revenue: revenue.rows[0].revenue });
 });
 
-adminRouter.get("/admin/riders", async (req, res) => {
+adminRouter.get("/riders", async (req, res) => {
   const status = req.query.status;
   const params = [];
   const filters = [];
@@ -43,7 +43,7 @@ adminRouter.get("/admin/riders", async (req, res) => {
   res.json({ riders: rows });
 });
 
-adminRouter.post("/admin/riders/:id/approve", async (req, res) => {
+adminRouter.post("/riders/:id/approve", async (req, res) => {
   const { rows } = await query("UPDATE riders SET approval_status = 'APPROVED' WHERE id = $1 RETURNING *", [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: "RIDER_NOT_FOUND" });
   await auditLog({
@@ -56,7 +56,7 @@ adminRouter.post("/admin/riders/:id/approve", async (req, res) => {
   res.json({ rider: rows[0] });
 });
 
-adminRouter.post("/admin/riders/:id/suspend", async (req, res) => {
+adminRouter.post("/riders/:id/suspend", async (req, res) => {
   const { rows } = await query("UPDATE riders SET approval_status = 'SUSPENDED', online_status = false WHERE id = $1 RETURNING *", [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: "RIDER_NOT_FOUND" });
   await auditLog({

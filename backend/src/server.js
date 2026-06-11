@@ -48,6 +48,14 @@ app.get("/ready", async (_req, res) => {
   }
 });
 app.use(authRouter);
+app.use("/admin", (req, res, next) => {
+  const adminKey = req.headers["x-admin-key"];
+  if (config.adminApiKey && adminKey === config.adminApiKey) {
+    req.auth = { sub: null, admin: true };
+    return next();
+  }
+  return requireAuth(req, res, next);
+}, idempotency(), adminRouter);
 app.use(requireAuth);
 app.use(idempotency());
 app.use(profileRouter);
@@ -56,7 +64,6 @@ app.use(ordersRouter);
 app.use(earningsRouter);
 app.use(documentsRouter);
 app.use(supportRouter);
-app.use(adminRouter);
 
 app.use((err, req, res, _next) => {
   logger.error("unhandled_request_error", {

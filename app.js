@@ -1,28 +1,137 @@
 const screen = document.querySelector("#screen");
 const railButtons = document.querySelectorAll(".rail-btn");
 
+const apiBaseUrl = (window.EVSPEARE_CONFIG?.apiBaseUrl || localStorage.getItem("riderApiBaseUrl") || "").replace(/\/$/, "");
+const savedToken = localStorage.getItem("riderToken") || "";
+
 const state = {
   current: "splash",
   phone: "",
   signupName: "",
   signupVehicle: "",
-  registeredNumbers: JSON.parse(localStorage.getItem("registeredRiders") || "[]"),
-  approvedNumbers: JSON.parse(localStorage.getItem("approvedRiders") || "[]"),
   otp: [],
+  token: savedToken,
+  user: JSON.parse(localStorage.getItem("riderUser") || "null"),
+  profile: null,
   online: false,
-  dark: false,
+  orders: [],
+  earnings: { total: 0, transactions: [] },
+  loading: false,
+  message: "",
   ordersTab: "completed",
-  earningsTab: "daily",
 };
+
+const ERROR_MESSAGES = {
+  OTP_RATE_LIMITED: "Too many OTP attempts. Please wait and try again.",
+  OTP_PROVIDER_NOT_CONFIGURED: "OTP service is not configured yet.",
+  OTP_DELIVERY_FAILED: "Could not send OTP. Please try again.",
+  OTP_VERIFICATION_FAILED: "Could not verify OTP. Please try again.",
+  INVALID_OTP: "OTP is incorrect or expired.",
+  RIDER_SIGNUP_REQUIRED: "This number is not registered. Please sign up first.",
+  RIDER_APPROVAL_PENDING: "Your rider registration is pending admin approval.",
+  RIDER_SUSPENDED: "Your rider account is suspended. Please contact support.",
+  RIDER_SIGNUP_FAILED: "Could not submit signup. Please try again.",
+  AUTH_REQUIRED: "Please login again.",
+  INVALID_TOKEN: "Session expired. Please login again.",
+};
+
+function phoneWithCountry() {
+  return `+91${state.phone}`;
+}
+
+function setMessage(message) {
+  state.message = message || "";
+  render();
+}
+
+function setLoading(loading) {
+  state.loading = loading;
+  render();
+}
+
+async function apiRequest(path, options = {}) {
+  if (!apiBaseUrl) throw new Error("Backend API URL is not configured.");
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}),
+      ...(options.headers || {}),
+    },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(ERROR_MESSAGES[data.error] || data.error || data.message || "Request failed.");
+  }
+  return data;
+}
+
+function saveSession(token, user) {
+  state.token = token;
+  state.user = user;
+  localStorage.setItem("riderToken", token);
+  localStorage.setItem("riderUser", JSON.stringify(user || null));
+}
+
+function clearSession() {
+  state.token = "";
+  state.user = null;
+  state.profile = null;
+  localStorage.removeItem("riderToken");
+  localStorage.removeItem("riderUser");
+}
+
+async function loadDashboardData() {
+  if (!state.token) return;
+  try {
+    const [profile, earnings, orders] = await Promise.all([
+      apiRequest("/profile"),
+      apiRequest("/earnings").catch(() => ({ total: 0, transactions: [] })),
+      apiRequest("/orders").catch(() => ({ orders: [] })),
+    ]);
+    state.profile = profile;
+    state.online = Boolean(profile.online_status);
+    state.earnings = {
+      total: Number(earnings.total || 0),
+      transactions: earnings.transactions || [],
+    };
+    state.orders = orders.orders || [];
+  } catch (error) {
+    if (error.message.includes("login") || error.message.includes("expired")) clearSession();
+    state.message = error.message;
+  }
+}
+
+async function goToDashboard() {
+  state.current = "dashboard";
+  state.message = "";
+  render();
+  await loadDashboardData();
+  render();
+}
 
 function setScreen(name) {
   state.current = name;
+  state.message = "";
   railButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.screen === name));
+  if (["dashboard", "earnings", "orders", "profile"].includes(name)) {
+    goToDashboard().then(() => {
+      if (name !== "dashboard") {
+        state.current = name;
+        render();
+      }
+    });
+    return;
+  }
   render();
 }
 
 function shell(content, opts = {}) {
   return `<div class="app-screen ${opts.className || ""}">${content}</div>`;
+}
+
+function messageBlock() {
+  return state.message ? `<p class="subtle" style="color:#c62828;text-align:center">${state.message}</p>` : "";
 }
 
 function topbar(title, right = "", back = "dashboard") {
@@ -54,7 +163,7 @@ function splash() {
       <h2>evspeare</h2>
       <p>Delivery Partner</p>
     </div>
-    <button class="primary" data-go="login">Start Riding</button>
+    <button class="primary" data-go="${state.token ? "dashboard" : "login"}">Start Riding</button>
     <div class="dots"><span></span><span></span><span></span></div>
   `, { className: "blue-screen" });
 }
@@ -67,7 +176,8 @@ function login() {
     </div>
     <img class="login-logo" src="rider_app/assets/icon.png" alt="evspeare">
     <label class="field"><b>+91</b><input id="phoneInput" inputmode="numeric" maxlength="10" placeholder="Enter mobile number" value="${state.phone}"></label>
-    <button class="primary" id="continueLogin">Continue</button>
+    ${messageBlock()}
+    <button class="primary" id="continueLogin">${state.loading ? "Sending..." : "Continue"}</button>
     <p class="bottom-note">New delivery partner? <span class="tiny-link" data-go="signup">Sign up for verification</span></p>
   `);
 }
@@ -80,19 +190,20 @@ function signup() {
     <label class="field single"><input id="signupName" placeholder="Full name" value="${state.signupName}"></label>
     <label class="field"><b>+91</b><input id="signupPhone" inputmode="numeric" maxlength="10" placeholder="Mobile number" value="${state.phone}"></label>
     <label class="field single"><input id="signupVehicle" placeholder="Vehicle number" value="${state.signupVehicle}"></label>
-    <button class="primary" id="submitSignup">Submit for verification</button>
+    ${messageBlock()}
+    <button class="primary" id="submitSignup">${state.loading ? "Submitting..." : "Submit for verification"}</button>
     <p class="bottom-note">Already signed up? <span class="tiny-link" data-go="login">Login</span></p>
   `);
 }
 
 function otp() {
-  const digits = state.otp.map((num) => num || "");
+  const digits = Array.from({ length: 6 }, (_, index) => state.otp[index] || "");
   return shell(`
     ${topbar("", "", "login")}
     <h2>Verify OTP</h2>
     <p class="subtle">Enter the live OTP sent by Twilio to<br><b style="color:#101828">+91 ${state.phone}</b></p>
     <div class="otp-row">${digits.map((num) => `<div class="otp-box">${num}</div>`).join("")}</div>
-    <p class="subtle" style="text-align:center">Resend OTP in <span id="timer">00:25</span></p>
+    ${messageBlock()}
     <div class="keypad">
       ${[1,2,3,4,5,6,7,8,9,"",0,"Del"].map((n) => `<button class="otp-key">${n}</button>`).join("")}
     </div>
@@ -100,21 +211,23 @@ function otp() {
 }
 
 function dashboard() {
+  const completed = state.orders.filter((order) => order.status === "DELIVERED").length;
   return shell(`
     <div class="topbar">
       <button class="icon-btn">Menu</button>
       <div class="online"><span class="dot ${state.online ? "" : "off"}"></span>You are <span class="${state.online ? "green" : "red"}">${state.online ? "Online" : "Offline"}</span></div>
       <button class="toggle ${state.online ? "" : "off"}" id="onlineToggle" aria-label="Online toggle"></button>
     </div>
+    ${messageBlock()}
     <div class="earn-card">
       <span>Today's Earnings</span>
-      <strong>Rs 0.00</strong>
-      <small>0 Orders Completed</small>
+      <strong>Rs ${Number(state.earnings.total || 0).toFixed(2)}</strong>
+      <small>${completed} Orders Completed</small>
     </div>
     <div class="metrics">
-      <div class="metric"><strong>00</strong><span>Completed</span></div>
+      <div class="metric"><strong>${String(completed).padStart(2, "0")}</strong><span>Completed</span></div>
       <div class="metric"><strong>${state.online ? "Live" : "Off"}</strong><span>Status</span></div>
-      <div class="metric"><strong>Rs 0</strong><span>Incentive</span></div>
+      <div class="metric"><strong>${state.orders.length}</strong><span>Assigned</span></div>
     </div>
     <div class="section-title">New Order</div>
     <div class="empty">
@@ -135,18 +248,15 @@ function emptyWorkflow(title, message, back = "dashboard") {
 }
 
 function earnings() {
+  const transactions = state.earnings.transactions || [];
   return shell(`
     ${topbar("Earnings", "", "dashboard")}
-    <span class="subtle">Today's Earnings</span>
-    <div class="money">Rs 0.00</div>
-    <div class="table">
-      <div><span>Order Earnings</span><b>Rs 0.00</b></div>
-      <div><span>Incentives</span><b>Rs 0.00</b></div>
-      <div><span>Tips</span><b>Rs 0.00</b></div>
-      <div><span>Adjustments</span><b>Rs 0.00</b></div>
-    </div>
+    <span class="subtle">Total Earnings</span>
+    <div class="money">Rs ${Number(state.earnings.total || 0).toFixed(2)}</div>
     <div class="section-title">Transactions</div>
-    <div class="empty"><div><strong>No earnings yet</strong><span>Completed orders will appear here</span></div></div>
+    ${transactions.length ? `<div class="table">${transactions.map((txn) => `
+      <div><span>${txn.order_id || txn.id}</span><b>Rs ${Number(txn.total || 0).toFixed(2)}</b></div>
+    `).join("")}</div>` : `<div class="empty"><div><strong>No earnings yet</strong><span>Completed orders will appear here</span></div></div>`}
     ${tabbar("earnings")}
   `, { className: "scroll" });
 }
@@ -154,20 +264,26 @@ function earnings() {
 function orders() {
   return shell(`
     ${topbar("My Orders", "", "dashboard")}
-    <div class="segments" style="grid-template-columns:repeat(2,1fr)">
-      <button class="${state.ordersTab === "completed" ? "active" : ""}" data-orders="completed">Completed</button>
-      <button class="${state.ordersTab === "cancelled" ? "active" : ""}" data-orders="cancelled">Cancelled</button>
-    </div>
-    <div class="empty"><div><strong>No orders yet</strong><span>Assigned orders will appear here</span></div></div>
+    ${state.orders.length ? `<div class="table">${state.orders.map((order) => `
+      <div><span>${order.public_id || order.id}<br><small>${order.status}</small></span><b>Rs ${Number(order.total_payout || 0).toFixed(2)}</b></div>
+    `).join("")}</div>` : `<div class="empty"><div><strong>No orders yet</strong><span>Assigned orders will appear here</span></div></div>`}
     ${tabbar("orders")}
   `, { className: "scroll" });
 }
 
 function profile() {
+  const name = state.profile?.name || state.user?.name || "Rider Partner";
+  const riderCode = state.profile?.rider_code || "Pending";
+  const approval = state.profile?.approval_status || "Pending";
   return shell(`
     ${topbar("Profile", "", "dashboard")}
-    <div class="profile-head"><div class="avatar"></div><div><b>${state.signupName || "Rider Partner"}</b><br><small class="subtle">Rider ID: Pending</small></div><span class="pill">Pending</span></div>
-    <div class="empty"><div><strong>No approved profile yet</strong><span>Admin approval is required.</span></div></div>
+    <div class="profile-head"><div class="avatar"></div><div><b>${name}</b><br><small class="subtle">Rider ID: ${riderCode}</small></div><span class="pill">${approval}</span></div>
+    <div class="table">
+      <div><span>Phone</span><b>${state.profile?.phone || state.user?.phone || "-"}</b></div>
+      <div><span>Vehicle</span><b>${state.profile?.vehicle_number || "-"}</b></div>
+      <div><span>Status</span><b>${state.online ? "Online" : "Offline"}</b></div>
+    </div>
+    <button class="secondary" id="logoutBtn">Logout</button>
     ${tabbar("profile")}
   `);
 }
@@ -193,11 +309,88 @@ const views = {
 };
 
 function render() {
-  document.body.classList.toggle("dark", state.dark);
   screen.innerHTML = views[state.current]();
 }
 
-document.addEventListener("click", (event) => {
+async function handleLoginContinue() {
+  if (state.phone.length !== 10) {
+    setMessage("Enter a valid 10-digit mobile number.");
+    return;
+  }
+  setLoading(true);
+  try {
+    const status = await apiRequest("/rider-status", {
+      method: "POST",
+      body: JSON.stringify({ phone: phoneWithCountry() }),
+    });
+    if (!status.exists) {
+      state.current = "signup";
+      state.message = "This number is not registered. Please sign up first.";
+      return;
+    }
+    if (!status.canLogin) {
+      state.message = ERROR_MESSAGES.RIDER_APPROVAL_PENDING;
+      return;
+    }
+    await apiRequest("/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ phone: phoneWithCountry() }),
+    });
+    state.otp = [];
+    state.current = "otp";
+  } catch (error) {
+    state.message = error.message;
+  } finally {
+    state.loading = false;
+    render();
+  }
+}
+
+async function handleSignup() {
+  const valid = state.signupName.trim().length >= 2 && state.phone.length === 10 && state.signupVehicle.trim().length >= 4;
+  if (!valid) {
+    setMessage("Enter name, 10-digit phone number, and vehicle number.");
+    return;
+  }
+  setLoading(true);
+  try {
+    await apiRequest("/rider-signup", {
+      method: "POST",
+      body: JSON.stringify({
+        name: state.signupName.trim(),
+        phone: phoneWithCountry(),
+        vehicleNumber: state.signupVehicle.trim(),
+      }),
+    });
+    state.current = "login";
+    state.message = "Signup submitted. Admin approval is required before login.";
+  } catch (error) {
+    state.message = error.message;
+  } finally {
+    state.loading = false;
+    render();
+  }
+}
+
+async function handleOtpComplete() {
+  setLoading(true);
+  try {
+    const data = await apiRequest("/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ phone: phoneWithCountry(), otp: state.otp.join("") }),
+    });
+    saveSession(data.token, data.user);
+    await goToDashboard();
+  } catch (error) {
+    state.message = error.message;
+    state.otp = [];
+    render();
+  } finally {
+    state.loading = false;
+  }
+}
+
+document.addEventListener("click", async (event) => {
   const go = event.target.closest("[data-go]");
   if (go) {
     setScreen(go.dataset.go);
@@ -209,55 +402,43 @@ document.addEventListener("click", (event) => {
     const value = key.textContent.trim();
     if (value === "Del") state.otp.pop();
     if (/^\d$/.test(value) && state.otp.length < 6) state.otp.push(value);
-    if (state.otp.length === 6) {
-      localStorage.setItem("riderLoggedIn", "true");
-      setTimeout(() => setScreen("dashboard"), 250);
-    }
     render();
-    return;
-  }
-
-  const ordersTab = event.target.closest("[data-orders]");
-  if (ordersTab) {
-    state.ordersTab = ordersTab.dataset.orders;
-    render();
+    if (state.otp.length === 6) await handleOtpComplete();
     return;
   }
 
   if (event.target.id === "continueLogin") {
-    if (state.phone.length !== 10) {
-      const field = document.querySelector(".field");
-      field.style.borderColor = "var(--red)";
-      field.querySelector("input").placeholder = "Enter a valid 10-digit number";
-      return;
-    }
-    if (!state.registeredNumbers.includes(state.phone)) {
-      setScreen("signup");
-      return;
-    }
-    if (!state.approvedNumbers.includes(state.phone)) {
-      alert("Your rider registration is pending admin approval.");
-      return;
-    }
-    state.otp = [];
-    setScreen("otp");
+    await handleLoginContinue();
     return;
   }
 
   if (event.target.id === "submitSignup") {
-    const valid = state.signupName.trim().length >= 2 && state.phone.length === 10 && state.signupVehicle.trim().length >= 4;
-    if (valid) {
-      if (!state.registeredNumbers.includes(state.phone)) state.registeredNumbers.push(state.phone);
-      localStorage.setItem("registeredRiders", JSON.stringify(state.registeredNumbers));
-      alert("Registration submitted. Admin approval is required before login.");
-      setScreen("login");
-    }
+    await handleSignup();
     return;
   }
 
   if (event.target.id === "onlineToggle") {
-    state.online = !state.online;
-    render();
+    try {
+      const nextOnline = !state.online;
+      state.online = nextOnline;
+      render();
+      await apiRequest(nextOnline ? "/online" : "/offline", {
+        method: "POST",
+        body: nextOnline ? JSON.stringify({ latitude: 0, longitude: 0 }) : undefined,
+      });
+      await loadDashboardData();
+      render();
+    } catch (error) {
+      state.online = !state.online;
+      state.message = error.message;
+      render();
+    }
+    return;
+  }
+
+  if (event.target.id === "logoutBtn") {
+    clearSession();
+    setScreen("login");
   }
 });
 

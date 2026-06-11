@@ -9,6 +9,7 @@ const allowedFiles = new Set([
   '/index.html',
   '/app.js',
   '/styles.css',
+  '/config.js',
   '/rider_app/assets/icon.png',
   '/rider_app/assets/favicon.png',
 ]);
@@ -28,6 +29,16 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   if (url.pathname === '/health') {
     send(res, 200, 'ok', { 'Content-Type': 'text/plain; charset=utf-8' });
+    return;
+  }
+
+  if (url.pathname === '/config.js') {
+    const apiBaseUrl = process.env.PUBLIC_API_BASE_URL || process.env.API_BASE_URL || process.env.BACKEND_URL || '';
+    send(res, 200, `window.EVSPEARE_CONFIG = ${JSON.stringify({ apiBaseUrl })};`, {
+      'Cache-Control': 'no-store',
+      'Content-Type': 'application/javascript; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+    });
     return;
   }
 

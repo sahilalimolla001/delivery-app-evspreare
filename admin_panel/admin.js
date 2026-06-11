@@ -7,7 +7,7 @@ let riders = [];
 let errorMessage = '';
 
 const config = {
-  apiBaseUrl: localStorage.getItem('adminApiBaseUrl') || '',
+  apiBaseUrl: localStorage.getItem('adminApiBaseUrl') || window.EVSPEARE_CONFIG?.apiBaseUrl || '',
   token: localStorage.getItem('adminToken') || '',
 };
 
@@ -17,13 +17,13 @@ function apiUrl(path) {
 
 async function apiRequest(path, options = {}) {
   if (!config.apiBaseUrl || !config.token) {
-    throw new Error('Connect backend API and admin token first.');
+    throw new Error('Connect backend API and admin key first.');
   }
   const response = await fetch(apiUrl(path), {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.token}`,
+      'x-admin-key': config.token,
       ...(options.headers || {}),
     },
   });
@@ -71,7 +71,7 @@ function configPanel() {
     <article class="panel config-panel">
       <h3>Backend Connection</h3>
       <label>API Base URL<input id="apiBaseUrl" placeholder="https://your-backend.up.railway.app" value="${config.apiBaseUrl}"></label>
-      <label>Admin Bearer Token<input id="adminToken" placeholder="Paste admin token" value="${config.token}"></label>
+      <label>Admin API Key<input id="adminToken" placeholder="Same value as backend ADMIN_API_KEY" value="${config.token}"></label>
       <button class="mini" id="saveConfig">Save & Refresh</button>
       ${errorMessage ? `<p class="error">${errorMessage}</p>` : ''}
     </article>
