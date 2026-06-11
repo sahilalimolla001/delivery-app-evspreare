@@ -1,5 +1,14 @@
 import { query } from "../db.js";
 
+const ACTIVE_ORDER_STATUSES = [
+  "ASSIGNED",
+  "GOING_TO_STORE",
+  "ARRIVED_STORE",
+  "PICKED_UP",
+  "GOING_TO_CUSTOMER",
+  "ARRIVED_CUSTOMER",
+];
+
 export async function findNearbyRiders({ latitude, longitude, radiusKm = 3 }) {
   const sql = `
     SELECT
@@ -22,6 +31,12 @@ export async function findNearbyRiders({ latitude, longitude, radiusKm = 3 }) {
     ) latest ON true
     WHERE r.online_status = true
       AND r.approval_status = 'APPROVED'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM orders active_orders
+        WHERE active_orders.rider_id = r.id
+          AND active_orders.status = ANY($4::order_status[])
+      )
       AND ST_DWithin(
         ST_SetSRID(ST_MakePoint(latest.longitude, latest.latitude), 4326)::geography,
         ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
@@ -30,7 +45,7 @@ export async function findNearbyRiders({ latitude, longitude, radiusKm = 3 }) {
     ORDER BY distance_km ASC, r.rating DESC, r.acceptance_rate DESC
     LIMIT 20
   `;
-  const { rows } = await query(sql, [latitude, longitude, radiusKm]);
+  const { rows } = await query(sql, [latitude, longitude, radiusKm, ACTIVE_ORDER_STATUSES]);
   return rows;
 }
 
@@ -40,19 +55,14 @@ export async function findNextAvailableRider() {
      FROM riders r
      LEFT JOIN orders active_orders
        ON active_orders.rider_id = r.id
-      AND active_orders.status IN (
-        'ASSIGNED',
-        'GOING_TO_STORE',
-        'ARRIVED_STORE',
-        'PICKED_UP',
-        'GOING_TO_CUSTOMER',
-        'ARRIVED_CUSTOMER'
-      )
+      AND active_orders.status = ANY($1::order_status[])
      WHERE r.online_status = true
        AND r.approval_status = 'APPROVED'
      GROUP BY r.id
+     HAVING count(active_orders.id) = 0
      ORDER BY count(active_orders.id) ASC, r.rating DESC, r.acceptance_rate DESC, r.last_seen_at DESC NULLS LAST
      LIMIT 1`,
+    [ACTIVE_ORDER_STATUSES],
   );
   return rows[0] || null;
 }
@@ -62,8 +72,15 @@ export async function assignOrderToRider({ orderId, riderId }) {
     `UPDATE orders
      SET rider_id = $2, status = 'ASSIGNED', assigned_at = now(), updated_at = now()
      WHERE id = $1 AND status IN ('PENDING', 'ASSIGNED')
+       AND NOT EXISTS (
+         SELECT 1
+         FROM orders active_orders
+         WHERE active_orders.rider_id = $2
+           AND active_orders.id <> orders.id
+           AND active_orders.status = ANY($3::order_status[])
+       )
      RETURNING *`,
-    [orderId, riderId],
+    [orderId, riderId, ACTIVE_ORDER_STATUSES],
   );
   return rows[0];
 }
