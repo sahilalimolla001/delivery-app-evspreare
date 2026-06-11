@@ -22,6 +22,7 @@ import { earningsRouter } from "./routes/earnings.js";
 import { documentsRouter } from "./routes/documents.js";
 import { supportRouter } from "./routes/support.js";
 import { adminRouter } from "./routes/admin.js";
+import { externalOrdersRouter } from "./routes/externalOrders.js";
 import { registerLocationSocket } from "./services/locationSocket.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -72,6 +73,7 @@ app.get("/admin/config.js", (_req, res) => {
 app.use("/admin", express.static(adminPanelDir, { index: false }));
 
 app.use(authRouter);
+app.use(externalOrdersRouter);
 app.use("/api/admin", (req, _res, next) => {
   req.auth = { sub: null, admin: true };
   return next();

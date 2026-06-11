@@ -193,3 +193,19 @@ CREATE INDEX IF NOT EXISTS idx_locations_rider_created ON locations(rider_id, cr
 CREATE INDEX IF NOT EXISTS idx_locations_order_created ON locations(order_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor_user_id);
+
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7);
+ALTER TABLE stores ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_stores_name ON stores(name);
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7);
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS external_source VARCHAR(80);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS external_order_id VARCHAR(120);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(40);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(40);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_collect_amount NUMERIC(12,2) NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_mode VARCHAR(40);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS source_payload JSONB NOT NULL DEFAULT '{}';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_orders_external_reference ON orders(external_source, external_order_id);

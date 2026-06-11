@@ -9,7 +9,8 @@ export const ordersRouter = express.Router();
 
 ordersRouter.get("/orders", async (req, res) => {
   const { rows } = await query(
-    `SELECT o.*, s.name AS store_name, c.name AS customer_name
+    `SELECT o.*, s.name AS store_name, s.address AS store_address,
+            c.name AS customer_name, c.phone AS customer_phone, c.address AS customer_address
      FROM orders o
      JOIN stores s ON s.id = o.store_id
      JOIN customers c ON c.id = o.customer_id

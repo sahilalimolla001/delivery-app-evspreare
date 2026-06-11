@@ -58,7 +58,11 @@ adminRouter.get("/riders", async (req, res) => {
 adminRouter.get("/orders", async (_req, res) => {
   const { rows } = await query(
     `SELECT o.id, o.public_id, o.status, o.total_payout, o.assigned_at, o.delivered_at, o.created_at,
-            s.name AS store_name, c.name AS customer_name, u.name AS rider_name, u.phone AS rider_phone
+            o.external_source, o.external_order_id, o.payment_method, o.payment_status,
+            o.payment_collect_amount, o.delivery_mode,
+            s.name AS store_name, s.address AS store_address,
+            c.name AS customer_name, c.phone AS customer_phone, c.address AS customer_address,
+            u.name AS rider_name, u.phone AS rider_phone
      FROM orders o
      JOIN stores s ON s.id = o.store_id
      JOIN customers c ON c.id = o.customer_id

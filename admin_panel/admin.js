@@ -143,15 +143,15 @@ function renderApproval() {
 
 function renderOrders() {
   content.innerHTML = `${errorPanel()}<article class="panel"><h3>Orders</h3>${tableRows(
-    ['Order', 'Store', 'Customer', 'Rider', 'Status', 'Payout'],
+    ['Order', 'Warehouse', 'Customer', 'Payment', 'Rider', 'Status'],
     records.map((order) => `
       <tr>
-        <td><b>${order.public_id || order.id}</b><small>${order.created_at || '-'}</small></td>
-        <td>${order.store_name || '-'}</td>
-        <td>${order.customer_name || '-'}</td>
+        <td><b>${order.public_id || order.id}</b><small>${order.external_order_id || order.created_at || '-'}</small></td>
+        <td>${order.store_name || '-'}<small>${order.store_address || ''}</small></td>
+        <td>${order.customer_name || '-'}<small>${order.customer_phone || ''}<br>${order.customer_address || ''}</small></td>
+        <td><b>${order.payment_method || '-'}</b><small>${order.payment_method === 'COD' ? `Collect ${money(order.payment_collect_amount)}` : (order.payment_status || 'Online/Prepaid')}</small></td>
         <td>${order.rider_name || '-'}<small>${order.rider_phone || ''}</small></td>
-        <td>${statusBadge(order.status)}</td>
-        <td>${money(order.total_payout)}</td>
+        <td>${statusBadge(order.status)}<small>${order.delivery_mode || ''}</small></td>
       </tr>
     `),
   )}</article>`;
