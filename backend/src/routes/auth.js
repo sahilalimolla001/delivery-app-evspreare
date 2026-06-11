@@ -37,7 +37,15 @@ authRouter.post("/send-otp", otpLimiter, validate(Joi.object({
       status: error.status,
       moreInfo: error.moreInfo,
     });
-    return res.status(502).json({ error: "OTP_DELIVERY_FAILED" });
+    return res.status(502).json({
+      error: "OTP_DELIVERY_FAILED",
+      message: error.code
+        ? `Twilio OTP failed (${error.code}). Check Twilio Verify settings.`
+        : "Twilio OTP delivery failed.",
+      twilioCode: error.code || null,
+      twilioStatus: error.status || null,
+      twilioMoreInfo: error.moreInfo || null,
+    });
   }
 });
 
@@ -126,7 +134,15 @@ authRouter.post("/verify-otp", otpLimiter, validate(Joi.object({
       status: error.status,
       moreInfo: error.moreInfo,
     });
-    return res.status(502).json({ error: "OTP_VERIFICATION_FAILED" });
+    return res.status(502).json({
+      error: "OTP_VERIFICATION_FAILED",
+      message: error.code
+        ? `Twilio verification failed (${error.code}).`
+        : "Twilio OTP verification failed.",
+      twilioCode: error.code || null,
+      twilioStatus: error.status || null,
+      twilioMoreInfo: error.moreInfo || null,
+    });
   }
   if (!ok) return res.status(401).json({ error: "INVALID_OTP" });
 

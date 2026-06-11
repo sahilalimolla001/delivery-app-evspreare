@@ -43,8 +43,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const code = error.response?.data?.error;
-    const message = ERROR_MESSAGES[code]
-      || error.response?.data?.message
+    const message = error.response?.data?.message
+      || ERROR_MESSAGES[code]
       || code
       || (error.request ? ERROR_MESSAGES.NETWORK_ERROR : error.message)
       || 'Request failed. Please try again.';
