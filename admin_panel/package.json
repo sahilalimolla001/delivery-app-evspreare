@@ -1,0 +1,12 @@
+{
+  "name": "quick-commerce-admin-panel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static admin panel for Railway",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

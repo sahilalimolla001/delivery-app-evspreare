@@ -1,0 +1,44 @@
+const fs = require('fs');
+const http = require('http');
+const path = require('path');
+
+const publicDir = __dirname;
+const port = Number(process.env.PORT || 8001);
+const allowedFiles = new Set(['/index.html', '/styles.css']);
+const mimeTypes = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+};
+
+function send(res, statusCode, body, headers = {}) {
+  res.writeHead(statusCode, headers);
+  res.end(body);
+}
+
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathname = url.pathname === '/' ? '/index.html' : url.pathname;
+
+  if (!allowedFiles.has(pathname)) {
+    send(res, 404, 'Not found', { 'Content-Type': 'text/plain; charset=utf-8' });
+    return;
+  }
+
+  const filePath = path.join(publicDir, pathname);
+  fs.readFile(filePath, (error, contents) => {
+    if (error) {
+      send(res, 500, 'Unable to load file', { 'Content-Type': 'text/plain; charset=utf-8' });
+      return;
+    }
+
+    send(res, 200, contents, {
+      'Cache-Control': pathname === '/index.html' ? 'no-store' : 'public, max-age=31536000, immutable',
+      'Content-Type': mimeTypes[path.extname(filePath)] || 'application/octet-stream',
+      'X-Content-Type-Options': 'nosniff',
+    });
+  });
+});
+
+server.listen(port, () => {
+  console.log(`Admin panel listening on ${port}`);
+});

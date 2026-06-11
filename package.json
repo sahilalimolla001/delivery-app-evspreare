@@ -1,0 +1,12 @@
+{
+  "name": "quick-commerce-rider-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static rider app web preview for Railway",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
