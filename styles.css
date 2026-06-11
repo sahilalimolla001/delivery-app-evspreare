@@ -210,6 +210,27 @@ h1 span { color: var(--blue); }
 .swipe span { height: 44px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.18); }
 .profile-head { display: grid; grid-template-columns: 54px 1fr auto; gap: 12px; align-items: center; margin-bottom: 20px; }
 .avatar { width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(145deg, #ffca7a, #c96f36); border: 4px solid #eaf2ff; }
+.profile-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.profile-card {
+  min-height: 112px;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  padding: 12px;
+  box-shadow: 0 10px 26px rgba(16, 24, 40, .05);
+}
+.profile-card span { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--blue); background: #eaf2ff; font-weight: 900; font-size: 13px; }
+.profile-card b { font-size: 13px; line-height: 1.25; }
+.profile-card small { font-size: 11px; line-height: 1.35; }
+.table.compact { margin-bottom: 0; }
+.policy-stack { display: grid; gap: 10px; padding-bottom: 8px; }
+.policy-card { padding: 14px; border-radius: 12px; }
+.policy-card h3 { margin: 0 0 7px; font-size: 15px; }
+.policy-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .navigate-row { background: #f7faff; border-radius: 14px; padding: 14px; display: grid; grid-template-columns: 54px 1fr auto; gap: 12px; align-items: center; margin-bottom: 18px; }
 .mini-primary { height: 38px; padding: 0 14px; border-radius: 9px; color: white; background: var(--blue); font-weight: 850; }
 
@@ -251,7 +272,7 @@ h1 span { color: var(--blue); }
 .rail-btn.active { color: white; background: var(--blue); border-color: var(--blue); box-shadow: 0 12px 22px rgba(7,93,244,.22); }
 
 body.dark { background: linear-gradient(135deg, #111827, #172033); }
-body.dark .phone, body.dark .statusbar, body.dark .app-screen, body.dark .modal, body.dark .card, body.dark .metric, body.dark .field, body.dark .secondary, body.dark .menu button, body.dark .menu .menu-row { background: #151f31; color: #eef4ff; border-color: #2d3b51; }
+body.dark .phone, body.dark .statusbar, body.dark .app-screen, body.dark .modal, body.dark .card, body.dark .metric, body.dark .field, body.dark .secondary, body.dark .menu button, body.dark .menu .menu-row, body.dark .profile-card, body.dark .policy-card { background: #151f31; color: #eef4ff; border-color: #2d3b51; }
 body.dark .subtle, body.dark .brand-panel p { color: #9aa8bd; }
 body.dark .empty, body.dark .welcome-asset, body.dark .navigate-row { background: #111827; border-color: #2d3b51; }
 

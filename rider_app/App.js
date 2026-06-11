@@ -23,6 +23,7 @@ import DeliveryScreen from './src/screens/DeliveryScreen';
 import VehicleInfoScreen from './src/screens/VehicleInfoScreen';
 import DocumentsScreen from './src/screens/DocumentsScreen';
 import PendingApprovalScreen from './src/screens/PendingApprovalScreen';
+import PolicyScreen from './src/screens/PolicyScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -58,6 +59,7 @@ function ProfileStack() {
       <Stack.Screen name="Support" component={SupportScreen} />
       <Stack.Screen name="VehicleInfo" component={VehicleInfoScreen} />
       <Stack.Screen name="Documents" component={DocumentsScreen} />
+      <Stack.Screen name="Policy" component={PolicyScreen} />
     </Stack.Navigator>
   );
 }

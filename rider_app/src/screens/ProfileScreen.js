@@ -9,6 +9,19 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 
+const profileCards = [
+  { label: 'Vehicle', detail: 'Registration and fitness', target: 'VehicleInfo' },
+  { label: 'Documents', detail: 'KYC and approvals', target: 'Documents' },
+  { label: 'Settings', detail: 'App preferences', target: 'Settings' },
+  { label: 'Support', detail: 'Help and disputes', target: 'Support' },
+  { label: 'Terms & Conditions', detail: 'Platform rules', policy: 'terms' },
+  { label: 'Privacy Policy', detail: 'Data and rights', policy: 'privacy' },
+  { label: 'User Agreement', detail: 'Rider engagement', policy: 'agreement' },
+  { label: 'Payment Policy', detail: 'Payouts and COD', policy: 'payments' },
+  { label: 'Grievance & Compliance', detail: 'Indian law contacts', policy: 'grievance' },
+  { label: 'Code of Conduct', detail: 'Safety and service', policy: 'conduct' },
+];
+
 const ProfileScreen = ({ navigation }) => {
   const { user, logout } = useAuthStore();
   const displayName = user?.name || 'Rider Partner';
@@ -39,14 +52,18 @@ const ProfileScreen = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={styles.menuContainer}>
-          <MenuItem label="Personal Info" />
-          <MenuItem label="Vehicle Info" onPress={() => navigation.navigate('VehicleInfo')} />
-          <MenuItem label="Documents" onPress={() => navigation.navigate('Documents')} />
-          <MenuItem label="Bank Details" />
-          <MenuItem label="Ratings & Reviews" />
-          <MenuItem label="Help & Support" onPress={() => navigation.navigate('Support')} />
-          <MenuItem label="Settings" onPress={() => navigation.navigate('Settings')} />
+        <View style={styles.cardGrid}>
+          {profileCards.map((card) => (
+            <ProfileCard
+              key={card.label}
+              label={card.label}
+              detail={card.detail}
+              onPress={() => {
+                if (card.target) navigation.navigate(card.target);
+                if (card.policy) navigation.navigate('Policy', { type: card.policy });
+              }}
+            />
+          ))}
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={logout}>
@@ -57,10 +74,13 @@ const ProfileScreen = ({ navigation }) => {
   );
 };
 
-const MenuItem = ({ label, onPress }) => (
-  <TouchableOpacity style={styles.menuItem} onPress={onPress} disabled={!onPress}>
-    <Text style={styles.menuLabel}>{label}</Text>
-    <Text style={styles.menuArrow}>Next</Text>
+const ProfileCard = ({ label, detail, onPress }) => (
+  <TouchableOpacity style={styles.profileCard} onPress={onPress}>
+    <View style={styles.cardIcon}>
+      <Text style={styles.cardIconText}>{label.slice(0, 1)}</Text>
+    </View>
+    <Text style={styles.cardTitle}>{label}</Text>
+    <Text style={styles.cardDetail}>{detail}</Text>
   </TouchableOpacity>
 );
 
@@ -137,25 +157,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#777',
   },
-  menuContainer: {
+  cardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     marginBottom: 24,
   },
-  menuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  profileCard: {
+    width: '48%',
+    minHeight: 118,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E5EAF2',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  cardIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#EAF2FF',
     alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
-  menuLabel: {
+  cardIconText: {
+    color: '#1E5BA8',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  cardTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#000',
+    marginBottom: 4,
   },
-  menuArrow: {
+  cardDetail: {
     fontSize: 12,
     color: '#8E8E93',
+    lineHeight: 16,
   },
   logoutButton: {
     paddingVertical: 12,

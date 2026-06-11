@@ -37,6 +37,88 @@ const ERROR_MESSAGES = {
   INVALID_TOKEN: "Session expired. Please login again.",
 };
 
+const profileCards = [
+  { screen: "vehicle", icon: "V", title: "Vehicle", note: "Registration and fitness" },
+  { screen: "documents", icon: "D", title: "Documents", note: "KYC and approvals" },
+  { screen: "settings", icon: "S", title: "Settings", note: "App preferences" },
+  { screen: "support", icon: "H", title: "Support", note: "Help and disputes" },
+  { screen: "terms", icon: "T", title: "Terms & Conditions", note: "Platform rules" },
+  { screen: "privacy", icon: "P", title: "Privacy Policy", note: "Data collection and rights" },
+  { screen: "agreement", icon: "A", title: "User Agreement", note: "Rider engagement" },
+  { screen: "payments", icon: "Rs", title: "Payment Policy", note: "Payouts and deductions" },
+  { screen: "grievance", icon: "G", title: "Grievance & Compliance", note: "Indian law contacts" },
+  { screen: "conduct", icon: "C", title: "Code of Conduct", note: "Safety and service" },
+];
+
+const policyContent = {
+  terms: {
+    title: "Terms & Conditions",
+    sections: [
+      ["Eligibility", "You must be legally capable of contracting in India, hold a valid mobile number, provide accurate KYC and vehicle details, and maintain approvals required for delivery work."],
+      ["Account Use", "Your account is personal to you. Do not share OTPs, login credentials, rider devices, customer data, or assigned orders with another person."],
+      ["Orders", "Orders are assigned based on availability, approval status, location, workload, and operational rules. One active order may be assigned at a time."],
+      ["Service Standards", "You must pick up, transport, and deliver items carefully, follow app instructions, keep customers informed through approved channels, and complete delivery proof when requested."],
+      ["Suspension", "The platform may pause or block access for fraud risk, unsafe conduct, repeated cancellations, false documents, customer harm, payment misuse, or legal compliance reasons."],
+      ["Law", "These terms are governed by Indian law. Courts or forums with jurisdiction over the operating city/state may handle disputes, subject to applicable consumer, labour, transport, and technology laws."],
+    ],
+  },
+  privacy: {
+    title: "Privacy Policy",
+    sections: [
+      ["Data Collected", "We may collect name, phone number, vehicle details, KYC documents, profile photo, device information, app activity, support messages, payout details, order activity, and live or background location when required for delivery."],
+      ["Purpose", "Data is used for account verification, rider approval, order assignment, route support, fraud prevention, safety, payouts, customer support, tax/accounting records, audits, and legal compliance."],
+      ["Consent", "Where consent is required, you may withdraw it through support or settings. Withdrawal may limit services that depend on that data, such as live order assignment or payout processing."],
+      ["Sharing", "Data may be shared with warehouses, customers where needed for delivery, payment partners, map/OTP providers, cloud vendors, auditors, law enforcement, and regulators when lawful or necessary."],
+      ["Rights", "Subject to applicable law, you may request access, correction, update, erasure, grievance redressal, and nomination for data rights. Some records may be retained for legal, fraud, tax, or dispute purposes."],
+      ["Security", "We use reasonable technical and organisational measures, but you must protect your phone, OTP, app session, and documents from unauthorised access."],
+    ],
+  },
+  agreement: {
+    title: "User Agreement",
+    sections: [
+      ["Independent Access", "Rider access is enabled after approval and may depend on location, demand, documents, vehicle status, and compliance checks."],
+      ["Duties", "You agree to maintain valid documents, obey traffic rules, avoid restricted items, protect customer privacy, report incidents, and follow pickup and delivery instructions."],
+      ["No Misuse", "Do not manipulate GPS, mark false delivery, collect unauthorised cash, substitute goods, create duplicate accounts, harass users, or misuse platform data."],
+      ["Equipment", "You are responsible for your vehicle, phone, internet, safety gear, fuel, and lawful operation unless the platform separately provides written support."],
+      ["Records", "Order timestamps, GPS, call/support logs, payment records, delivery proof, and audit logs may be used to resolve disputes."],
+      ["Termination", "Either side may stop platform use. Existing dues, investigations, customer complaints, document obligations, and legal records may continue after deactivation."],
+    ],
+  },
+  payments: {
+    title: "Payment Policy",
+    sections: [
+      ["Earnings", "Earnings may include base pay, distance pay, surge, tips, incentives, reimbursements, and adjustments shown in the app or backend records."],
+      ["Payouts", "Payouts are processed to approved payment details after internal checks. Timelines may vary due to bank holidays, payment partner issues, KYC review, or dispute holds."],
+      ["COD", "Cash collected from customers must be deposited or settled as instructed. Unsettled COD may be adjusted against earnings or recovered as permitted by law and contract."],
+      ["Deductions", "Deductions may apply for cancellations attributable to rider conduct, missing goods, false delivery, penalties, advances, cash settlement gaps, tax withholding, or legally required recoveries."],
+      ["Disputes", "Payment disputes should be raised through support with order ID and evidence. Corrections, if approved, will reflect in a later payout cycle."],
+      ["Taxes", "You are responsible for your personal tax compliance unless tax deduction, invoice, or reporting obligations are handled by the platform under applicable law."],
+    ],
+  },
+  grievance: {
+    title: "Grievance & Compliance",
+    sections: [
+      ["Support Channel", "Use Help & Support in the app for operational issues, payment disputes, document review, account status, safety incidents, and data requests."],
+      ["Response", "The platform will review requests based on priority, available evidence, legal obligations, and operational records."],
+      ["Data Grievance", "Privacy and data requests may include access, correction, update, erasure, consent withdrawal, and complaint escalation where applicable."],
+      ["IT Compliance", "For unlawful content, impersonation, cyber incidents, or platform misuse, include screenshots, order IDs, phone number, date, and a clear description."],
+      ["Emergency", "For accidents, threats, police matters, medical emergencies, or unsafe deliveries, contact local emergency services first and then notify support."],
+      ["Records", "Complaints and resolutions may be retained for audit, legal defence, regulatory, fraud prevention, and service improvement purposes."],
+    ],
+  },
+  conduct: {
+    title: "Code of Conduct",
+    sections: [
+      ["Customer Respect", "Be polite, avoid arguments, do not request personal information unrelated to delivery, and use approved contact channels only."],
+      ["Safety", "Follow traffic laws, avoid rash driving, do not deliver under the influence of alcohol or drugs, and do not carry unauthorised passengers for orders."],
+      ["Product Care", "Keep packages sealed, dry, and secure. Report damaged, missing, restricted, or suspicious items before completing the order."],
+      ["Integrity", "Do not fake location, delivery proof, customer OTP, cash collection, item status, or order completion."],
+      ["Privacy", "Do not photograph, store, share, or misuse customer address, phone number, order details, or warehouse information except as needed for delivery."],
+      ["Incident Reporting", "Report accidents, theft, customer disputes, police stops, payment issues, and app errors promptly with order ID and evidence."],
+    ],
+  },
+};
+
 function phoneWithCountry() {
   return `+91${state.phone}`;
 }
@@ -322,14 +404,78 @@ function profile() {
   return shell(`
     ${topbar("Profile", "", "dashboard")}
     <div class="profile-head"><div class="avatar"></div><div><b>${name}</b><br><small class="subtle">Rider ID: ${riderCode}</small></div><span class="pill">${approval}</span></div>
-    <div class="table">
+    <div class="table compact">
       <div><span>Phone</span><b>${state.profile?.phone || state.user?.phone || "-"}</b></div>
       <div><span>Vehicle</span><b>${state.profile?.vehicle_number || "-"}</b></div>
       <div><span>Status</span><b>${state.online ? "Online" : "Offline"}</b></div>
     </div>
+    <div class="profile-card-grid">
+      ${profileCards.map((card) => `
+        <button class="profile-card" data-go="${card.screen}">
+          <span>${card.icon}</span>
+          <b>${card.title}</b>
+          <small>${card.note}</small>
+        </button>
+      `).join("")}
+    </div>
     <button class="secondary" id="logoutBtn">Logout</button>
     ${tabbar("profile")}
-  `);
+  `, { className: "scroll" });
+}
+
+function simpleInfoPage(title, rows) {
+  return shell(`
+    ${topbar(title, "", "profile")}
+    <div class="card info-list">
+      ${rows.map(([label, value]) => `
+        <div class="info-row"><b>${label}</b><span>${value}</span></div>
+      `).join("")}
+    </div>
+    ${tabbar("profile")}
+  `, { className: "scroll" });
+}
+
+function settings() {
+  return shell(`
+    ${topbar("Settings", "", "profile")}
+    <div class="card">
+      <div class="settings-row"><span>Order alerts</span><button class="toggle small" aria-label="Order alerts"></button></div>
+      <div class="settings-row"><span>Location sharing</span><button class="toggle small" aria-label="Location sharing"></button></div>
+      <div class="settings-row"><span>Dark mode</span><button class="toggle small off" aria-label="Dark mode"></button></div>
+      <div class="settings-row"><span>Hindi language</span><button class="toggle small off" aria-label="Hindi language"></button></div>
+    </div>
+    ${tabbar("profile")}
+  `, { className: "scroll" });
+}
+
+function support() {
+  return shell(`
+    ${topbar("Support", "", "profile")}
+    <div class="card info-list">
+      <div class="info-row"><b>Payment issue</b><span>Raise with order ID</span></div>
+      <div class="info-row"><b>Order issue</b><span>Pickup, damage, address</span></div>
+      <div class="info-row"><b>Account issue</b><span>Approval, login, documents</span></div>
+      <div class="info-row"><b>Emergency</b><span>Contact local emergency services first</span></div>
+    </div>
+    <button class="primary" data-go="grievance">Open Grievance Policy</button>
+    ${tabbar("profile")}
+  `, { className: "scroll" });
+}
+
+function policyPage(key) {
+  const content = policyContent[key];
+  return shell(`
+    ${topbar(content.title, "", "profile")}
+    <div class="policy-stack">
+      ${content.sections.map(([heading, body]) => `
+        <article class="policy-card">
+          <h3>${heading}</h3>
+          <p>${body}</p>
+        </article>
+      `).join("")}
+    </div>
+    ${tabbar("profile")}
+  `, { className: "scroll" });
 }
 
 const views = {
@@ -347,10 +493,26 @@ const views = {
   earnings,
   orders,
   profile,
-  vehicle: () => emptyWorkflow("Vehicle Info", "No approved vehicle record yet", "profile"),
-  documents: () => emptyWorkflow("Documents", "No documents uploaded yet", "profile"),
-  settings: () => emptyWorkflow("Settings", "No settings configured yet", "profile"),
-  support: () => emptyWorkflow("Help & Support", "No support tickets yet", "profile"),
+  vehicle: () => simpleInfoPage("Vehicle", [
+    ["Vehicle number", state.profile?.vehicle_number || "-"],
+    ["Approval", state.profile?.approval_status || "Pending"],
+    ["Fitness", "Required where applicable"],
+    ["Insurance", "Required where applicable"],
+  ]),
+  documents: () => simpleInfoPage("Documents", [
+    ["Identity KYC", "Required"],
+    ["Driving licence", "Required where applicable"],
+    ["Vehicle RC", "Required"],
+    ["Bank details", "Required for payouts"],
+  ]),
+  settings,
+  support,
+  terms: () => policyPage("terms"),
+  privacy: () => policyPage("privacy"),
+  agreement: () => policyPage("agreement"),
+  payments: () => policyPage("payments"),
+  grievance: () => policyPage("grievance"),
+  conduct: () => policyPage("conduct"),
 };
 
 function render() {
