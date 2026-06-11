@@ -19,9 +19,10 @@ Backend service:
 Rider web preview service:
 - `PUBLIC_API_BASE_URL=https://your-backend-service.up.railway.app`
 
-Admin panel service:
-- `PUBLIC_API_BASE_URL=https://your-backend-service.up.railway.app`
-- `ADMIN_API_KEY` same value as the backend service `ADMIN_API_KEY`
+Merged backend + admin panel:
+- Deploy only the backend service with root directory `backend`.
+- Open the admin panel at `https://your-backend-service.up.railway.app/admin`.
+- A separate admin panel Railway service is no longer required.
 
 Database setup:
 - From the backend service shell, run `npm run migrate` once after attaching Railway Postgres.

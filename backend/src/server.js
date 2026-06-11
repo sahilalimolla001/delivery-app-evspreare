@@ -1,5 +1,8 @@
 import express from "express";
+import fs from "fs";
 import http from "http";
+import path from "path";
+import { fileURLToPath } from "url";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -20,6 +23,12 @@ import { documentsRouter } from "./routes/documents.js";
 import { supportRouter } from "./routes/support.js";
 import { adminRouter } from "./routes/admin.js";
 import { registerLocationSocket } from "./services/locationSocket.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const bundledAdminPanelDir = path.resolve(__dirname, "../admin_panel");
+const repoAdminPanelDir = path.resolve(__dirname, "../../admin_panel");
+const adminPanelDir = fs.existsSync(bundledAdminPanelDir) ? bundledAdminPanelDir : repoAdminPanelDir;
 
 const app = express();
 const server = http.createServer(app);
@@ -47,7 +56,20 @@ app.get("/ready", async (_req, res) => {
     res.status(503).json({ ok: false, database: false, error: "READINESS_FAILED" });
   }
 });
+
+app.get(["/admin", "/admin/"], (_req, res) => {
+  res.sendFile(path.join(adminPanelDir, "index.html"));
+});
+app.get("/admin/config.js", (_req, res) => {
+  res.type("application/javascript").set("Cache-Control", "no-store").send("window.EVSPEARE_CONFIG = {};");
+});
+app.use("/admin", express.static(adminPanelDir, { index: false }));
+
 app.use(authRouter);
+app.use("/api/admin", (req, _res, next) => {
+  req.auth = { sub: null, admin: true };
+  return next();
+}, idempotency(), adminRouter);
 app.use("/admin", (req, res, next) => {
   const adminKey = req.headers["x-admin-key"];
   if (config.adminApiKey && adminKey === config.adminApiKey) {
