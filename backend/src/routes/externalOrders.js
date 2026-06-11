@@ -211,10 +211,7 @@ externalOrdersRouter.post("/external/warehouse/orders", requireExternalOrderKey,
 externalOrdersRouter.post("/external/warehouse/sync", requireWarehouseConfig, async (req, res) => {
   const url = new URL("/api/integrations/delivery-orders", config.warehouse.apiUrl);
   url.searchParams.set("delivery", req.query.delivery || "all");
-  url.searchParams.set(
-    "statuses",
-    req.query.statuses || "pending,assigned,picking,picked,packed,ready_to_dispatch,dispatch_ready,processing,confirmed",
-  );
+  url.searchParams.set("statuses", req.query.statuses || "all");
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${config.warehouse.integrationApiKey}`,
