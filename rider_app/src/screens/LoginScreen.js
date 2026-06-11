@@ -1,24 +1,30 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 
 const LoginScreen = ({ navigation }) => {
   const [phone, setPhone] = useState('');
-  const { sendOtp, isLoading, error, clearError } = useAuthStore();
+  const { checkRiderStatus, sendOtp, isLoading, error, clearError } = useAuthStore();
 
   const handleContinue = async () => {
     if (phone.length !== 10 || isLoading) return;
 
     try {
       clearError();
+      const status = await checkRiderStatus(phone);
+      if (!status.exists) {
+        navigation.navigate('Signup', { phone });
+        return;
+      }
+
       const normalizedPhone = await sendOtp(phone);
       navigation.navigate('OTP', { phone: normalizedPhone });
     } catch {
@@ -29,22 +35,18 @@ const LoginScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Header Banner */}
         <View style={styles.headerBanner}>
-          <Text style={styles.headerTitle}>👜</Text>
+          <Text style={styles.headerTitle}>evspeare</Text>
+          <Text style={styles.headerSubtitle}>Delivery Partner</Text>
         </View>
 
-        {/* Form */}
         <View style={styles.formContainer}>
-          <Text style={styles.title}>Login / Sign Up</Text>
-          <Text style={styles.subtitle}>
-            Enter your mobile number to continue
-          </Text>
+          <Text style={styles.title}>Login</Text>
+          <Text style={styles.subtitle}>Enter your registered mobile number to continue</Text>
 
-          {/* Country Code + Phone Input */}
           <View style={styles.phoneInputWrapper}>
             <View style={styles.countryCodePicker}>
-              <Text style={styles.countryCode}>🇮🇳 +91</Text>
+              <Text style={styles.countryCode}>+91</Text>
             </View>
             <TextInput
               style={styles.phoneInput}
@@ -64,7 +66,6 @@ const LoginScreen = ({ navigation }) => {
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          {/* Continue Button */}
           <TouchableOpacity
             style={[
               styles.continueButton,
@@ -73,26 +74,16 @@ const LoginScreen = ({ navigation }) => {
             onPress={handleContinue}
             disabled={phone.length !== 10 || isLoading}
           >
-            <Text style={styles.buttonText}>
-              {isLoading ? 'Sending OTP...' : 'Continue'}
+            <Text style={styles.buttonText}>{isLoading ? 'Checking...' : 'Continue'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.signupLink}
+            onPress={() => navigation.navigate('Signup', { phone })}
+          >
+            <Text style={styles.signupText}>
+              New delivery partner? <Text style={styles.signupTextStrong}>Sign up for verification</Text>
             </Text>
-          </TouchableOpacity>
-
-          {/* Social Login */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>Or continue with</Text>
-            <View style={styles.divider} />
-          </View>
-
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialIcon}>🔍</Text>
-            <Text style={styles.socialText}>Login with Google</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.socialButton}>
-            <Text style={styles.socialIcon}>🍎</Text>
-            <Text style={styles.socialText}>Login with Apple</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -111,14 +102,25 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   headerBanner: {
-    backgroundColor: '#1E5BA8',
+    backgroundColor: '#075DFF',
     borderRadius: 12,
-    paddingVertical: 30,
+    paddingVertical: 36,
     alignItems: 'center',
     marginBottom: 30,
   },
   headerTitle: {
-    fontSize: 80,
+    color: '#fff',
+    fontSize: 42,
+    fontWeight: '900',
+    letterSpacing: 0,
+  },
+  headerSubtitle: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 4,
+    textTransform: 'uppercase',
+    marginTop: 6,
   },
   formContainer: {
     marginBottom: 20,
@@ -160,11 +162,11 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   continueButton: {
-    backgroundColor: '#1E5BA8',
+    backgroundColor: '#075DFF',
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 14,
   },
   buttonDisabled: {
     backgroundColor: '#B0BFC9',
@@ -179,39 +181,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 12,
   },
-  dividerContainer: {
-    flexDirection: 'row',
+  signupLink: {
     alignItems: 'center',
-    marginBottom: 20,
+    paddingVertical: 10,
   },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#DDD',
-  },
-  dividerText: {
-    marginHorizontal: 12,
+  signupText: {
     color: '#666',
-    fontSize: 12,
+    fontSize: 13,
+    textAlign: 'center',
   },
-  socialButton: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  socialIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  socialText: {
-    color: '#000',
-    fontSize: 14,
-    fontWeight: '600',
+  signupTextStrong: {
+    color: '#075DFF',
+    fontWeight: '700',
   },
 });
 

@@ -9,6 +9,7 @@ import { useAuthStore } from './src/stores/authStore';
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import OTPScreen from './src/screens/OTPScreen';
+import SignupScreen from './src/screens/SignupScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import OrderDetailsScreen from './src/screens/OrderDetailsScreen';
 import EarningsScreen from './src/screens/EarningsScreen';
@@ -30,6 +31,7 @@ function AuthStack() {
     <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: '#fff' } }}>
       <Stack.Screen name="Splash" component={SplashScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Signup" component={SignupScreen} />
       <Stack.Screen name="OTP" component={OTPScreen} />
     </Stack.Navigator>
   );

@@ -8,6 +8,8 @@ const ERROR_MESSAGES = {
   OTP_DELIVERY_FAILED: 'We could not send the OTP. Please try again.',
   OTP_VERIFICATION_FAILED: 'We could not verify the OTP. Please try again.',
   INVALID_OTP: 'The OTP is incorrect or expired.',
+  RIDER_SIGNUP_REQUIRED: 'This number is not registered as a rider. Please sign up first.',
+  RIDER_SIGNUP_FAILED: 'We could not create your signup. Please try again.',
   VALIDATION_ERROR: 'Please check the entered details.',
   AUTH_REQUIRED: 'Please login again.',
   INVALID_TOKEN: 'Your session expired. Please login again.',
@@ -51,6 +53,8 @@ api.interceptors.response.use(
 export const authApi = {
   sendOtp: (phone) => api.post('/send-otp', { phone }),
   verifyOtp: (phone, otp) => api.post('/verify-otp', { phone, otp }),
+  riderStatus: (phone) => api.post('/rider-status', { phone }),
+  riderSignup: (payload) => api.post('/rider-signup', payload),
 };
 
 export const riderApi = {

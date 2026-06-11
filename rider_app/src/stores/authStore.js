@@ -22,6 +22,7 @@ export const useAuthStore = create((set, get) => ({
   isLoading: false,
   error: null,
   otpChallenge: null,
+  signupDraft: null,
 
   initializeAuth: async () => {
     try {
@@ -71,6 +72,47 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  checkRiderStatus: async (phone) => {
+    const normalizedPhone = normalizePhone(phone);
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authApi.riderStatus(normalizedPhone);
+      set({ isLoading: false });
+      return response.data;
+    } catch (error) {
+      set({ isLoading: false, error: error.message });
+      throw error;
+    }
+  },
+
+  signupRider: async ({ name, phone, email, vehicleNumber }) => {
+    const normalizedPhone = normalizePhone(phone);
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authApi.riderSignup({
+        name,
+        phone: normalizedPhone,
+        email,
+        vehicleNumber,
+      });
+      const challenge = {
+        phone: normalizedPhone,
+        devOtp: response.data?.devOtp || null,
+        provider: response.data?.provider || 'unknown',
+        expiresAt: Date.now() + OTP_TTL_MS,
+      };
+      set({
+        isLoading: false,
+        otpChallenge: challenge,
+        signupDraft: { name, phone: normalizedPhone, email, vehicleNumber },
+      });
+      return normalizedPhone;
+    } catch (error) {
+      set({ isLoading: false, error: error.message });
+      throw error;
+    }
+  },
+
   verifyOtp: async (phone, otp) => {
     const normalizedPhone = normalizePhone(phone);
     set({ isLoading: true, error: null });
@@ -84,7 +126,7 @@ export const useAuthStore = create((set, get) => ({
         AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)),
       ]);
 
-      set({ user, token, isLoggedIn: true, isLoading: false, error: null, otpChallenge: null });
+      set({ user, token, isLoggedIn: true, isLoading: false, error: null, otpChallenge: null, signupDraft: null });
       return user;
     } catch (error) {
       set({ isLoading: false, error: error.message });
@@ -98,7 +140,7 @@ export const useAuthStore = create((set, get) => ({
       AsyncStorage.removeItem(AUTH_USER_KEY),
     ]);
     setAuthToken(null);
-    set({ user: null, token: null, isLoggedIn: false, error: null, otpChallenge: null });
+    set({ user: null, token: null, isLoggedIn: false, error: null, otpChallenge: null, signupDraft: null });
   },
 
   clearError: () => set({ error: null }),
