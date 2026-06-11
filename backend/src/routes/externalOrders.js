@@ -1,6 +1,7 @@
 import express from "express";
 import { config } from "../config.js";
 import { query } from "../db.js";
+import { dispatchOrderToRider } from "../services/orderAssignmentService.js";
 
 export const externalOrdersRouter = express.Router();
 
@@ -200,7 +201,8 @@ async function importWarehouseOrder(rawPayload) {
 externalOrdersRouter.post("/external/warehouse/orders", requireExternalOrderKey, async (req, res) => {
   try {
     const order = await importWarehouseOrder(req.body);
-    res.status(201).json({ ok: true, order });
+    const dispatch = await dispatchOrderToRider(order);
+    res.status(201).json({ ok: true, order: dispatch.order, dispatched: dispatch.assigned, riderId: dispatch.riderId });
   } catch (error) {
     res.status(400).json({ ok: false, error: error.message });
   }
@@ -219,8 +221,12 @@ externalOrdersRouter.post("/external/warehouse/sync", requireWarehouseConfig, as
   if (!response.ok) return res.status(response.status).json(data);
 
   const imported = [];
+  const dispatched = [];
   for (const warehouseOrder of data.orders || []) {
-    imported.push(await importWarehouseOrder(warehouseOrder));
+    const order = await importWarehouseOrder(warehouseOrder);
+    const dispatch = await dispatchOrderToRider(order);
+    imported.push(dispatch.order);
+    if (dispatch.assigned) dispatched.push(dispatch.order.id);
   }
-  res.json({ ok: true, imported: imported.length, orders: imported });
+  res.json({ ok: true, imported: imported.length, dispatched: dispatched.length, orders: imported });
 });
