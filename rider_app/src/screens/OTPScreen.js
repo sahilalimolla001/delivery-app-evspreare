@@ -15,7 +15,8 @@ const OTPScreen = ({ navigation, route }) => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(30);
   const inputs = React.useRef([]);
-  const { verifyOtp, sendOtp, isLoading, error, clearError } = useAuthStore();
+  const { verifyOtp, sendOtp, isLoading, error, clearError, otpChallenge } = useAuthStore();
+  const devOtp = otpChallenge?.phone === phone ? otpChallenge.devOtp : null;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -25,12 +26,31 @@ const OTPScreen = ({ navigation, route }) => {
   }, []);
 
   const handleOtpInput = (index, value) => {
-    const digit = value.replace(/\D/g, '').slice(-1);
+    const digits = value.replace(/\D/g, '');
+    if (digits.length > 1) {
+      const nextOtp = ['', '', '', '', '', ''];
+      digits.slice(0, 6).split('').forEach((digit, nextIndex) => {
+        nextOtp[nextIndex] = digit;
+      });
+      setOtp(nextOtp);
+      inputs.current[Math.min(digits.length, 6) - 1]?.focus();
+      clearError();
+      return;
+    }
+
+    const digit = digits.slice(-1);
     const newOtp = [...otp];
     newOtp[index] = digit;
     setOtp(newOtp);
+    clearError();
     if (digit && index < inputs.current.length - 1) {
       inputs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyPress = (index, event) => {
+    if (event.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
+      inputs.current[index - 1]?.focus();
     }
   };
 
@@ -72,8 +92,15 @@ const OTPScreen = ({ navigation, route }) => {
         {/* Title */}
         <Text style={styles.title}>Verify OTP</Text>
         <Text style={styles.subtitle}>
-          We've sent a 6 digit code to +91 {phone.slice(-4)}
+          We've sent a 6 digit code to {phone}
         </Text>
+
+        {devOtp ? (
+          <View style={styles.devOtpBox}>
+            <Text style={styles.devOtpLabel}>Development OTP</Text>
+            <Text style={styles.devOtpCode}>{devOtp}</Text>
+          </View>
+        ) : null}
 
         {/* OTP Input Fields */}
         <View style={styles.otpContainer}>
@@ -88,7 +115,9 @@ const OTPScreen = ({ navigation, route }) => {
                 maxLength={1}
                 value={digit}
                 onChangeText={(value) => handleOtpInput(index, value)}
+                onKeyPress={(event) => handleKeyPress(index, event)}
                 textAlign="center"
+                autoFocus={index === 0}
               />
             </View>
           ))}
@@ -184,6 +213,27 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 12,
     marginBottom: 24,
+  },
+  devOtpBox: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1E5BA8',
+  },
+  devOtpLabel: {
+    color: '#1E5BA8',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  devOtpCode: {
+    color: '#000',
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 2,
   },
   errorText: {
     color: '#C62828',

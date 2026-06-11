@@ -15,14 +15,14 @@ const LoginScreen = ({ navigation }) => {
   const { sendOtp, isLoading, error, clearError } = useAuthStore();
 
   const handleContinue = async () => {
-    if (phone.length === 10) {
-      try {
-        clearError();
-        const normalizedPhone = await sendOtp(phone);
-        navigation.navigate('OTP', { phone: normalizedPhone });
-      } catch {
-        // Store already exposes a user-safe error message.
-      }
+    if (phone.length !== 10 || isLoading) return;
+
+    try {
+      clearError();
+      const normalizedPhone = await sendOtp(phone);
+      navigation.navigate('OTP', { phone: normalizedPhone });
+    } catch {
+      // Store already exposes a user-safe error message.
     }
   };
 
@@ -53,7 +53,12 @@ const LoginScreen = ({ navigation }) => {
               keyboardType="phone-pad"
               maxLength={10}
               value={phone}
-              onChangeText={(value) => setPhone(value.replace(/\D/g, ''))}
+              onChangeText={(value) => {
+                clearError();
+                setPhone(value.replace(/\D/g, ''));
+              }}
+              returnKeyType="done"
+              onSubmitEditing={handleContinue}
             />
           </View>
 

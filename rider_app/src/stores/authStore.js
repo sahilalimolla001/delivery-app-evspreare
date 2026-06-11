@@ -4,6 +4,7 @@ import { authApi, riderApi, setAuthToken } from '../services/api';
 
 const AUTH_TOKEN_KEY = 'authToken';
 const AUTH_USER_KEY = 'authUser';
+const OTP_TTL_MS = 5 * 60 * 1000;
 
 function normalizePhone(phone) {
   const digits = String(phone || '').replace(/\D/g, '');
@@ -20,6 +21,7 @@ export const useAuthStore = create((set, get) => ({
   isInitializing: true,
   isLoading: false,
   error: null,
+  otpChallenge: null,
 
   initializeAuth: async () => {
     try {
@@ -54,8 +56,14 @@ export const useAuthStore = create((set, get) => ({
     const normalizedPhone = normalizePhone(phone);
     set({ isLoading: true, error: null });
     try {
-      await authApi.sendOtp(normalizedPhone);
-      set({ isLoading: false });
+      const response = await authApi.sendOtp(normalizedPhone);
+      const challenge = {
+        phone: normalizedPhone,
+        devOtp: response.data?.devOtp || null,
+        provider: response.data?.provider || 'unknown',
+        expiresAt: Date.now() + OTP_TTL_MS,
+      };
+      set({ isLoading: false, otpChallenge: challenge });
       return normalizedPhone;
     } catch (error) {
       set({ isLoading: false, error: error.message });
@@ -76,7 +84,7 @@ export const useAuthStore = create((set, get) => ({
         AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)),
       ]);
 
-      set({ user, token, isLoggedIn: true, isLoading: false, error: null });
+      set({ user, token, isLoggedIn: true, isLoading: false, error: null, otpChallenge: null });
       return user;
     } catch (error) {
       set({ isLoading: false, error: error.message });
@@ -90,7 +98,7 @@ export const useAuthStore = create((set, get) => ({
       AsyncStorage.removeItem(AUTH_USER_KEY),
     ]);
     setAuthToken(null);
-    set({ user: null, token: null, isLoggedIn: false, error: null });
+    set({ user: null, token: null, isLoggedIn: false, error: null, otpChallenge: null });
   },
 
   clearError: () => set({ error: null }),

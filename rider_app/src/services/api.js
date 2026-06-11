@@ -2,6 +2,18 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8080';
 
+const ERROR_MESSAGES = {
+  OTP_RATE_LIMITED: 'Too many OTP attempts. Please wait a few minutes and try again.',
+  OTP_PROVIDER_NOT_CONFIGURED: 'OTP service is not configured yet. Please contact support.',
+  OTP_DELIVERY_FAILED: 'We could not send the OTP. Please try again.',
+  OTP_VERIFICATION_FAILED: 'We could not verify the OTP. Please try again.',
+  INVALID_OTP: 'The OTP is incorrect or expired.',
+  VALIDATION_ERROR: 'Please check the entered details.',
+  AUTH_REQUIRED: 'Please login again.',
+  INVALID_TOKEN: 'Your session expired. Please login again.',
+  NETWORK_ERROR: 'Network error. Check your connection and API URL.',
+};
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
@@ -26,10 +38,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error.response?.data?.message
-      || error.response?.data?.error
-      || error.message
-      || 'REQUEST_FAILED';
+    const code = error.response?.data?.error;
+    const message = ERROR_MESSAGES[code]
+      || error.response?.data?.message
+      || code
+      || (error.request ? ERROR_MESSAGES.NETWORK_ERROR : error.message)
+      || 'Request failed. Please try again.';
     return Promise.reject(new Error(message));
   },
 );
