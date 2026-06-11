@@ -16,6 +16,7 @@ const schema = Joi.object({
   ADMIN_API_KEY: Joi.string().allow("").optional(),
   ALLOWED_ORIGINS: Joi.string().allow("").default(""),
   TRUST_PROXY: Joi.boolean().truthy("true").falsy("false").default(false),
+  AUTO_MIGRATE: Joi.boolean().truthy("true").falsy("false").default(true),
   OTP_TTL_SECONDS: Joi.number().integer().min(60).max(900).default(300),
   OTP_PROVIDER: Joi.string().valid("dev", "twilio").default("dev"),
   TWILIO_ACCOUNT_SID: Joi.string().allow("").optional(),
@@ -53,6 +54,7 @@ export const config = {
   adminApiKey: env.ADMIN_API_KEY,
   allowedOrigins: env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean),
   trustProxy: env.TRUST_PROXY,
+  autoMigrate: env.AUTO_MIGRATE,
   otpTtlSeconds: env.OTP_TTL_SECONDS,
   otpProvider: env.OTP_PROVIDER,
   twilio: {

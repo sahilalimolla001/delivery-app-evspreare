@@ -6,7 +6,9 @@ import { config } from "./config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const schemaPath = path.resolve(__dirname, "../../database/schema.sql");
+const bundledSchemaPath = path.resolve(__dirname, "../database/schema.sql");
+const repoSchemaPath = path.resolve(__dirname, "../../database/schema.sql");
+const schemaPath = fs.existsSync(bundledSchemaPath) ? bundledSchemaPath : repoSchemaPath;
 
 async function migrate() {
   if (!config.databaseUrl) {

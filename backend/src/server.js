@@ -29,6 +29,9 @@ const __dirname = path.dirname(__filename);
 const bundledAdminPanelDir = path.resolve(__dirname, "../admin_panel");
 const repoAdminPanelDir = path.resolve(__dirname, "../../admin_panel");
 const adminPanelDir = fs.existsSync(bundledAdminPanelDir) ? bundledAdminPanelDir : repoAdminPanelDir;
+const bundledSchemaPath = path.resolve(__dirname, "../database/schema.sql");
+const repoSchemaPath = path.resolve(__dirname, "../../database/schema.sql");
+const schemaPath = fs.existsSync(bundledSchemaPath) ? bundledSchemaPath : repoSchemaPath;
 
 const app = express();
 const server = http.createServer(app);
@@ -58,7 +61,7 @@ app.get("/ready", async (_req, res) => {
 });
 
 app.get("/admin", (_req, res) => {
-  res.redirect(308, "/admin/");
+  res.sendFile(path.join(adminPanelDir, "index.html"));
 });
 app.get("/admin/", (_req, res) => {
   res.sendFile(path.join(adminPanelDir, "index.html"));
@@ -100,6 +103,15 @@ app.use((err, req, res, _next) => {
 });
 
 registerLocationSocket(io);
+
+async function applyDatabaseSchema() {
+  if (!config.databaseUrl || !config.autoMigrate) return;
+  const schema = fs.readFileSync(schemaPath, "utf8");
+  await pool.query(schema);
+  logger.info("database_schema_applied");
+}
+
+await applyDatabaseSchema();
 
 const listener = server.listen(config.port, () => {
   logger.info("server_started", { port: config.port, nodeEnv: config.nodeEnv });
