@@ -22,6 +22,7 @@ import PickupScreen from './src/screens/PickupScreen';
 import DeliveryScreen from './src/screens/DeliveryScreen';
 import VehicleInfoScreen from './src/screens/VehicleInfoScreen';
 import DocumentsScreen from './src/screens/DocumentsScreen';
+import PendingApprovalScreen from './src/screens/PendingApprovalScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -123,7 +124,7 @@ function AppStack() {
 }
 
 export default function App() {
-  const { initializeAuth, isInitializing, isLoggedIn } = useAuthStore();
+  const { initializeAuth, isInitializing, isLoggedIn, pendingApproval } = useAuthStore();
 
   React.useEffect(() => {
     initializeAuth();
@@ -142,9 +143,13 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer>
-        {isLoggedIn ? <AppStack /> : <AuthStack />}
-      </NavigationContainer>
+      {pendingApproval ? (
+        <PendingApprovalScreen />
+      ) : (
+        <NavigationContainer>
+          {isLoggedIn ? <AppStack /> : <AuthStack />}
+        </NavigationContainer>
+      )}
     </GestureHandlerRootView>
   );
 }

@@ -12,6 +12,8 @@ const state = {
   otp: [],
   token: savedToken,
   user: JSON.parse(localStorage.getItem("riderUser") || "null"),
+  pendingApproval: localStorage.getItem("pendingApproval") === "true",
+  pendingPhone: localStorage.getItem("pendingApprovalPhone") || "",
   profile: null,
   online: false,
   orders: [],
@@ -69,8 +71,12 @@ async function apiRequest(path, options = {}) {
 function saveSession(token, user) {
   state.token = token;
   state.user = user;
+  state.pendingApproval = false;
+  state.pendingPhone = "";
   localStorage.setItem("riderToken", token);
   localStorage.setItem("riderUser", JSON.stringify(user || null));
+  localStorage.removeItem("pendingApproval");
+  localStorage.removeItem("pendingApprovalPhone");
 }
 
 function clearSession() {
@@ -79,6 +85,24 @@ function clearSession() {
   state.profile = null;
   localStorage.removeItem("riderToken");
   localStorage.removeItem("riderUser");
+}
+
+function setPendingApproval(phone) {
+  state.pendingApproval = true;
+  state.pendingPhone = phone || phoneWithCountry();
+  state.token = "";
+  state.user = null;
+  localStorage.setItem("pendingApproval", "true");
+  localStorage.setItem("pendingApprovalPhone", state.pendingPhone);
+  localStorage.removeItem("riderToken");
+  localStorage.removeItem("riderUser");
+}
+
+function clearPendingApproval() {
+  state.pendingApproval = false;
+  state.pendingPhone = "";
+  localStorage.removeItem("pendingApproval");
+  localStorage.removeItem("pendingApprovalPhone");
 }
 
 async function loadDashboardData() {
@@ -111,6 +135,11 @@ async function goToDashboard() {
 }
 
 function setScreen(name) {
+  if (state.pendingApproval && name !== "pendingApproval" && name !== "login") {
+    state.current = "pendingApproval";
+    render();
+    return;
+  }
   state.current = name;
   state.message = "";
   railButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.screen === name));
@@ -163,7 +192,7 @@ function splash() {
       <h2>evspeare</h2>
       <p>Delivery Partner</p>
     </div>
-    <button class="primary" data-go="${state.token ? "dashboard" : "login"}">Start Riding</button>
+    <button class="primary" data-go="${state.pendingApproval ? "pendingApproval" : (state.token ? "dashboard" : "login")}">Start Riding</button>
     <div class="dots"><span></span><span></span><span></span></div>
   `, { className: "blue-screen" });
 }
@@ -178,7 +207,7 @@ function login() {
     <label class="field"><b>+91</b><input id="phoneInput" inputmode="numeric" maxlength="10" placeholder="Enter mobile number" value="${state.phone}"></label>
     ${messageBlock()}
     <button class="primary" id="continueLogin">${state.loading ? "Sending..." : "Continue"}</button>
-    <p class="bottom-note">New delivery partner? <span class="tiny-link" data-go="signup">Sign up for verification</span></p>
+    <p class="bottom-note">New rider? Verify OTP first, then signup will open automatically.</p>
   `);
 }
 
@@ -193,6 +222,18 @@ function signup() {
     ${messageBlock()}
     <button class="primary" id="submitSignup">${state.loading ? "Submitting..." : "Submit for verification"}</button>
     <p class="bottom-note">Already signed up? <span class="tiny-link" data-go="login">Login</span></p>
+  `);
+}
+
+function pendingApproval() {
+  return shell(`
+    <div style="padding-top:70px;text-align:center">
+      <span class="pill">Pending</span>
+      <h2 style="margin-top:18px">Waiting for approval</h2>
+      <p class="subtle">Your rider registration is submitted. Admin approval is required before you can use the app.</p>
+      <p class="subtle"><b style="color:#075DFF">${state.pendingPhone}</b></p>
+      <button class="secondary" id="changePendingPhone">Use another number</button>
+    </div>
   `);
 }
 
@@ -293,6 +334,7 @@ const views = {
   login,
   signup,
   otp,
+  pendingApproval,
   dashboard,
   orderPopup: dashboard,
   map: () => emptyWorkflow("Map", "No active route yet"),
@@ -319,19 +361,6 @@ async function handleLoginContinue() {
   }
   setLoading(true);
   try {
-    const status = await apiRequest("/rider-status", {
-      method: "POST",
-      body: JSON.stringify({ phone: phoneWithCountry() }),
-    });
-    if (!status.exists) {
-      state.current = "signup";
-      state.message = "This number is not registered. Please sign up first.";
-      return;
-    }
-    if (!status.canLogin) {
-      state.message = ERROR_MESSAGES.RIDER_APPROVAL_PENDING;
-      return;
-    }
     await apiRequest("/send-otp", {
       method: "POST",
       body: JSON.stringify({ phone: phoneWithCountry() }),
@@ -362,8 +391,9 @@ async function handleSignup() {
         vehicleNumber: state.signupVehicle.trim(),
       }),
     });
-    state.current = "login";
-    state.message = "Signup submitted. Admin approval is required before login.";
+    setPendingApproval(phoneWithCountry());
+    state.current = "pendingApproval";
+    state.message = "";
   } catch (error) {
     state.message = error.message;
   } finally {
@@ -379,6 +409,19 @@ async function handleOtpComplete() {
       method: "POST",
       body: JSON.stringify({ phone: phoneWithCountry(), otp: state.otp.join("") }),
     });
+    if (data.requiresSignup) {
+      state.current = "signup";
+      state.message = "This number is not registered. Please sign up first.";
+      render();
+      return;
+    }
+    if (data.pendingApproval) {
+      setPendingApproval(data.phone || phoneWithCountry());
+      state.current = "pendingApproval";
+      state.message = "";
+      render();
+      return;
+    }
     saveSession(data.token, data.user);
     await goToDashboard();
   } catch (error) {
@@ -440,6 +483,12 @@ document.addEventListener("click", async (event) => {
     clearSession();
     setScreen("login");
   }
+
+  if (event.target.id === "changePendingPhone") {
+    clearPendingApproval();
+    clearSession();
+    setScreen("login");
+  }
 });
 
 document.addEventListener("input", (event) => {
@@ -455,4 +504,5 @@ document.addEventListener("input", (event) => {
 });
 
 railButtons.forEach((button) => button.addEventListener("click", () => setScreen(button.dataset.screen)));
+if (state.pendingApproval) state.current = "pendingApproval";
 render();

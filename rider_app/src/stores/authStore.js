@@ -4,6 +4,7 @@ import { authApi, riderApi, setAuthToken } from '../services/api';
 
 const AUTH_TOKEN_KEY = 'authToken';
 const AUTH_USER_KEY = 'authUser';
+const PENDING_PHONE_KEY = 'pendingApprovalPhone';
 const OTP_TTL_MS = 5 * 60 * 1000;
 
 function normalizePhone(phone) {
@@ -18,6 +19,8 @@ export const useAuthStore = create((set, get) => ({
   user: null,
   token: null,
   isLoggedIn: false,
+  pendingApproval: false,
+  pendingPhone: null,
   isInitializing: true,
   isLoading: false,
   error: null,
@@ -30,9 +33,17 @@ export const useAuthStore = create((set, get) => ({
         AsyncStorage.getItem(AUTH_TOKEN_KEY),
         AsyncStorage.getItem(AUTH_USER_KEY),
       ]);
+      const pendingPhone = await AsyncStorage.getItem(PENDING_PHONE_KEY);
 
       if (!token) {
-        set({ isInitializing: false, isLoggedIn: false, user: null, token: null });
+        set({
+          isInitializing: false,
+          isLoggedIn: false,
+          pendingApproval: Boolean(pendingPhone),
+          pendingPhone,
+          user: null,
+          token: null,
+        });
         return;
       }
 
@@ -43,13 +54,13 @@ export const useAuthStore = create((set, get) => ({
         const response = await riderApi.profile();
         const user = response.data || fallbackUser;
         await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
-        set({ user, token, isLoggedIn: true, isInitializing: false, error: null });
+        set({ user, token, isLoggedIn: true, pendingApproval: false, pendingPhone: null, isInitializing: false, error: null });
       } catch {
-        set({ user: fallbackUser, token, isLoggedIn: Boolean(fallbackUser), isInitializing: false });
+        set({ user: fallbackUser, token, isLoggedIn: Boolean(fallbackUser), pendingApproval: false, pendingPhone: null, isInitializing: false });
       }
     } catch (error) {
       setAuthToken(null);
-      set({ user: null, token: null, isLoggedIn: false, isInitializing: false, error: error.message });
+      set({ user: null, token: null, isLoggedIn: false, pendingApproval: false, pendingPhone: null, isInitializing: false, error: error.message });
     }
   },
 
@@ -95,16 +106,13 @@ export const useAuthStore = create((set, get) => ({
         email,
         vehicleNumber,
       });
-      const challenge = {
-        phone: normalizedPhone,
-        devOtp: response.data?.devOtp || null,
-        provider: response.data?.provider || 'unknown',
-        expiresAt: Date.now() + OTP_TTL_MS,
-      };
+      await AsyncStorage.setItem(PENDING_PHONE_KEY, normalizedPhone);
       set({
         isLoading: false,
-        otpChallenge: challenge,
+        otpChallenge: null,
         signupDraft: { name, phone: normalizedPhone, email, vehicleNumber },
+        pendingApproval: true,
+        pendingPhone: normalizedPhone,
       });
       return normalizedPhone;
     } catch (error) {
@@ -118,16 +126,35 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await authApi.verifyOtp(normalizedPhone, otp);
-      const { token, user } = response.data;
+      const { token, user, requiresSignup, pendingApproval, approvalStatus } = response.data;
+
+      if (requiresSignup) {
+        set({ isLoading: false, error: null, otpChallenge: null, signupDraft: { phone: normalizedPhone } });
+        return { requiresSignup: true, phone: normalizedPhone };
+      }
+
+      if (pendingApproval || approvalStatus === 'PENDING') {
+        await AsyncStorage.setItem(PENDING_PHONE_KEY, normalizedPhone);
+        set({
+          isLoading: false,
+          error: null,
+          otpChallenge: null,
+          pendingApproval: true,
+          pendingPhone: normalizedPhone,
+          isLoggedIn: false,
+        });
+        return { pendingApproval: true, phone: normalizedPhone };
+      }
 
       setAuthToken(token);
       await Promise.all([
         AsyncStorage.setItem(AUTH_TOKEN_KEY, token),
         AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)),
+        AsyncStorage.removeItem(PENDING_PHONE_KEY),
       ]);
 
-      set({ user, token, isLoggedIn: true, isLoading: false, error: null, otpChallenge: null, signupDraft: null });
-      return user;
+      set({ user, token, isLoggedIn: true, pendingApproval: false, pendingPhone: null, isLoading: false, error: null, otpChallenge: null, signupDraft: null });
+      return { user };
     } catch (error) {
       set({ isLoading: false, error: error.message });
       throw error;
@@ -138,9 +165,15 @@ export const useAuthStore = create((set, get) => ({
     await Promise.all([
       AsyncStorage.removeItem(AUTH_TOKEN_KEY),
       AsyncStorage.removeItem(AUTH_USER_KEY),
+      AsyncStorage.removeItem(PENDING_PHONE_KEY),
     ]);
     setAuthToken(null);
-    set({ user: null, token: null, isLoggedIn: false, error: null, otpChallenge: null, signupDraft: null });
+    set({ user: null, token: null, isLoggedIn: false, pendingApproval: false, pendingPhone: null, error: null, otpChallenge: null, signupDraft: null });
+  },
+
+  clearPendingApproval: async () => {
+    await AsyncStorage.removeItem(PENDING_PHONE_KEY);
+    set({ pendingApproval: false, pendingPhone: null, signupDraft: null, error: null });
   },
 
   clearError: () => set({ error: null }),

@@ -12,25 +12,13 @@ import { useAuthStore } from '../stores/authStore';
 
 const LoginScreen = ({ navigation }) => {
   const [phone, setPhone] = useState('');
-  const { checkRiderStatus, sendOtp, isLoading, error, clearError, setError } = useAuthStore();
+  const { sendOtp, isLoading, error, clearError } = useAuthStore();
 
   const handleContinue = async () => {
     if (phone.length !== 10 || isLoading) return;
 
     try {
       clearError();
-      const status = await checkRiderStatus(phone);
-      if (!status.exists) {
-        navigation.navigate('Signup', { phone });
-        return;
-      }
-      if (!status.canLogin) {
-        setError(status.approvalStatus === 'SUSPENDED'
-          ? 'Your rider account is suspended. Please contact support.'
-          : 'Your rider registration is pending admin approval.');
-        return;
-      }
-
       const normalizedPhone = await sendOtp(phone);
       navigation.navigate('OTP', { phone: normalizedPhone });
     } catch {
@@ -48,7 +36,7 @@ const LoginScreen = ({ navigation }) => {
 
         <View style={styles.formContainer}>
           <Text style={styles.title}>Login</Text>
-          <Text style={styles.subtitle}>Enter your registered mobile number to continue</Text>
+          <Text style={styles.subtitle}>Enter your mobile number to receive OTP</Text>
 
           <View style={styles.phoneInputWrapper}>
             <View style={styles.countryCodePicker}>
@@ -83,14 +71,7 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.buttonText}>{isLoading ? 'Checking...' : 'Continue'}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.signupLink}
-            onPress={() => navigation.navigate('Signup', { phone })}
-          >
-            <Text style={styles.signupText}>
-              New delivery partner? <Text style={styles.signupTextStrong}>Sign up for verification</Text>
-            </Text>
-          </TouchableOpacity>
+          <Text style={styles.signupText}>New rider? Verify OTP first, then signup will open automatically.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -187,18 +168,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 12,
   },
-  signupLink: {
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
   signupText: {
     color: '#666',
     fontSize: 13,
     textAlign: 'center',
-  },
-  signupTextStrong: {
-    color: '#075DFF',
-    fontWeight: '700',
+    paddingVertical: 10,
   },
 });
 

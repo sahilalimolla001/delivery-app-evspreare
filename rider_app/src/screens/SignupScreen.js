@@ -24,13 +24,12 @@ const SignupScreen = ({ navigation, route }) => {
     if (!isValid || isLoading) return;
     try {
       clearError();
-      const normalizedPhone = await signupRider({
+      await signupRider({
         name: name.trim(),
         phone,
         email: email.trim(),
         vehicleNumber: vehicleNumber.trim().toUpperCase(),
       });
-      navigation.navigate('OTP', { phone: normalizedPhone, fromSignup: true });
     } catch {
       // Store already exposes a user-safe error message.
     }

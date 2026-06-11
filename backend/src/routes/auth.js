@@ -93,19 +93,12 @@ authRouter.post("/rider-signup", otpLimiter, validate(Joi.object({
       );
     }
 
-    const otpResult = await sendOtp(phone);
     res.status(201).json({
       message: "RIDER_SIGNUP_CREATED",
       user,
       approvalStatus: "PENDING",
-      provider: otpResult.provider,
-      channel: otpResult.channel,
-      devOtp: process.env.NODE_ENV === "production" ? undefined : otpResult.devOtp,
     });
   } catch (error) {
-    if (error.message === "TWILIO_VERIFY_NOT_CONFIGURED") {
-      return res.status(503).json({ error: "OTP_PROVIDER_NOT_CONFIGURED" });
-    }
     console.error("rider_signup_failed", error);
     return res.status(500).json({ error: "RIDER_SIGNUP_FAILED" });
   }
@@ -131,15 +124,20 @@ authRouter.post("/verify-otp", otpLimiter, validate(Joi.object({
   const { rows } = await query(
     `SELECT u.id, u.phone, u.name, u.email, r.id AS rider_id, r.rider_code, r.approval_status
      FROM users u
-     JOIN riders r ON r.user_id = u.id
+     LEFT JOIN riders r ON r.user_id = u.id
      WHERE u.phone = $1`,
     [phone],
   );
-  if (!rows[0]) return res.status(403).json({ error: "RIDER_SIGNUP_REQUIRED" });
+  if (!rows[0] || !rows[0].rider_id) {
+    return res.json({ phone, requiresSignup: true, approvalStatus: null });
+  }
   const user = rows[0];
   if (user.approval_status !== "APPROVED") {
+    if (user.approval_status === "PENDING") {
+      return res.json({ phone, pendingApproval: true, approvalStatus: "PENDING" });
+    }
     return res.status(403).json({
-      error: user.approval_status === "SUSPENDED" ? "RIDER_SUSPENDED" : "RIDER_APPROVAL_PENDING",
+      error: "RIDER_SUSPENDED",
       approvalStatus: user.approval_status,
     });
   }

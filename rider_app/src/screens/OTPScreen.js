@@ -58,7 +58,10 @@ const OTPScreen = ({ navigation, route }) => {
     if (otpCode.length === 6) {
       try {
         clearError();
-        await verifyOtp(phone, otpCode);
+        const result = await verifyOtp(phone, otpCode);
+        if (result?.requiresSignup) {
+          navigation.replace('Signup', { phone: result.phone });
+        }
       } catch {
         // Store already exposes a user-safe error message.
       }
