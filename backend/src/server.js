@@ -106,12 +106,20 @@ registerLocationSocket(io);
 
 async function applyDatabaseSchema() {
   if (!config.databaseUrl || !config.autoMigrate) return;
+  if (!fs.existsSync(schemaPath)) {
+    logger.warn("database_schema_missing", { schemaPath });
+    return;
+  }
   const schema = fs.readFileSync(schemaPath, "utf8");
   await pool.query(schema);
   logger.info("database_schema_applied");
 }
 
-await applyDatabaseSchema();
+try {
+  await applyDatabaseSchema();
+} catch (error) {
+  logger.error("database_schema_apply_failed", { error: error.message });
+}
 
 const listener = server.listen(config.port, () => {
   logger.info("server_started", { port: config.port, nodeEnv: config.nodeEnv });
