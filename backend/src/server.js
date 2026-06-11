@@ -106,6 +106,10 @@ registerLocationSocket(io);
 
 async function applyDatabaseSchema() {
   if (!config.databaseUrl || !config.autoMigrate) return;
+  if (!fs.existsSync(schemaPath)) {
+    logger.info("database_schema_skipped", { reason: "schema file not found", path: schemaPath });
+    return;
+  }
   const schema = fs.readFileSync(schemaPath, "utf8");
   await pool.query(schema);
   logger.info("database_schema_applied");
