@@ -6,38 +6,13 @@ const state = {
   phone: "",
   signupName: "",
   signupVehicle: "",
-  registeredNumbers: ["9876543210"],
-  approvedNumbers: ["9876543210"],
+  registeredNumbers: JSON.parse(localStorage.getItem("registeredRiders") || "[]"),
+  approvedNumbers: JSON.parse(localStorage.getItem("approvedRiders") || "[]"),
+  otp: [],
   online: false,
-  otp: ["2", "4", "6", "8", "1", "3"],
-  orderAccepted: false,
   dark: false,
   ordersTab: "completed",
   earningsTab: "daily",
-};
-
-const order = {
-  id: "#DN1254876",
-  store: "Daily Needs Store",
-  customer: "Rohit Sharma",
-  pickup: "45, 5th Main Rd, HSR Layout, Bengaluru, Karnataka 560102",
-  drop: "12, 2nd Cross Rd, HSR Layout, Bengaluru, Karnataka 560102",
-  payout: "₹46.50",
-};
-
-const icons = {
-  home: "⌂",
-  earn: "▤",
-  orders: "▣",
-  profile: "♙",
-  call: "☎",
-  chat: "◉",
-  doc: "▧",
-  help: "?",
-  bike: "◒",
-  bank: "₹",
-  star: "★",
-  info: "i",
 };
 
 function setScreen(name) {
@@ -53,7 +28,7 @@ function shell(content, opts = {}) {
 function topbar(title, right = "", back = "dashboard") {
   return `
     <div class="topbar">
-      <button class="back" data-go="${back}" aria-label="Back">‹</button>
+      <button class="back" data-go="${back}" aria-label="Back">Back</button>
       <div class="title">${title}</div>
       ${right || "<span style='width:34px'></span>"}
     </div>
@@ -62,13 +37,13 @@ function topbar(title, right = "", back = "dashboard") {
 
 function tabbar(active) {
   const tabs = [
-    ["dashboard", icons.home, "Home"],
-    ["earnings", icons.earn, "Earnings"],
-    ["orders", icons.orders, "Orders"],
-    ["profile", icons.profile, "Profile"],
+    ["dashboard", "Home"],
+    ["earnings", "Earnings"],
+    ["orders", "Orders"],
+    ["profile", "Profile"],
   ];
-  return `<div class="tabbar">${tabs.map(([key, icon, label]) => `
-    <button class="${active === key ? "active" : ""}" data-go="${key}"><b>${icon}</b>${label}</button>
+  return `<div class="tabbar">${tabs.map(([key, label]) => `
+    <button class="${active === key ? "active" : ""}" data-go="${key}"><b>${label[0]}</b>${label}</button>
   `).join("")}</div>`;
 }
 
@@ -79,7 +54,7 @@ function splash() {
       <h2>evspeare</h2>
       <p>Delivery Partner</p>
     </div>
-    <button class="primary" data-go="${localStorage.getItem("riderLoggedIn") ? "dashboard" : "login"}">Start Riding</button>
+    <button class="primary" data-go="login">Start Riding</button>
     <div class="dots"><span></span><span></span><span></span></div>
   `, { className: "blue-screen" });
 }
@@ -101,7 +76,7 @@ function signup() {
   return shell(`
     ${topbar("", "", "login")}
     <h2>Rider Signup</h2>
-    <p class="subtle">Create your delivery partner profile. Your account will remain pending until verification is approved.</p>
+    <p class="subtle">Create your delivery partner profile. Admin approval is required before login.</p>
     <label class="field single"><input id="signupName" placeholder="Full name" value="${state.signupName}"></label>
     <label class="field"><b>+91</b><input id="signupPhone" inputmode="numeric" maxlength="10" placeholder="Mobile number" value="${state.phone}"></label>
     <label class="field single"><input id="signupVehicle" placeholder="Vehicle number" value="${state.signupVehicle}"></label>
@@ -115,149 +90,75 @@ function otp() {
   return shell(`
     ${topbar("", "", "login")}
     <h2>Verify OTP</h2>
-    <p class="subtle">We've sent a 6 digit code to<br><b style="color:#101828">+91 ${state.phone || "98765 43210"}</b> <span class="tiny-link" data-go="login">Change</span></p>
+    <p class="subtle">Enter the live OTP sent by Twilio to<br><b style="color:#101828">+91 ${state.phone}</b></p>
     <div class="otp-row">${digits.map((num) => `<div class="otp-box">${num}</div>`).join("")}</div>
     <p class="subtle" style="text-align:center">Resend OTP in <span id="timer">00:25</span></p>
     <div class="keypad">
-      ${[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((n) => `<button class="otp-key">${n}</button>`).join("")}
+      ${[1,2,3,4,5,6,7,8,9,"",0,"Del"].map((n) => `<button class="otp-key">${n}</button>`).join("")}
     </div>
   `);
 }
 
-function dashboard(withModal = false) {
+function dashboard() {
   return shell(`
     <div class="topbar">
-      <button class="icon-btn">☰</button>
+      <button class="icon-btn">Menu</button>
       <div class="online"><span class="dot ${state.online ? "" : "off"}"></span>You are <span class="${state.online ? "green" : "red"}">${state.online ? "Online" : "Offline"}</span></div>
       <button class="toggle ${state.online ? "" : "off"}" id="onlineToggle" aria-label="Online toggle"></button>
     </div>
     <div class="earn-card">
       <span>Today's Earnings</span>
-      <strong>₹1,245.80</strong>
-      <small>6 Orders Completed</small>
+      <strong>Rs 0.00</strong>
+      <small>0 Orders Completed</small>
     </div>
     <div class="metrics">
-      <div class="metric"><strong>06</strong><span>Completed</span></div>
-      <div class="metric"><strong>01:45</strong><span>Hours Online</span></div>
-      <div class="metric"><strong>₹180</strong><span>Incentive</span></div>
+      <div class="metric"><strong>00</strong><span>Completed</span></div>
+      <div class="metric"><strong>${state.online ? "Live" : "Off"}</strong><span>Status</span></div>
+      <div class="metric"><strong>Rs 0</strong><span>Incentive</span></div>
     </div>
     <div class="section-title">New Order</div>
     <div class="empty">
-      <div><div class="bag-icon">▣</div><strong>No new orders</strong><span>You will get new orders here</span></div>
+      <div><div class="bag-icon">Box</div><strong>No new orders</strong><span>${state.online ? "Waiting for assignment" : "Go online to receive orders"}</span></div>
     </div>
-    <button class="soft-btn" style="margin-top:16px;width:100%" data-go="orderPopup">Simulate New Order</button>
     ${tabbar("dashboard")}
-    ${withModal ? newOrderModal() : ""}
   `);
 }
 
-function newOrderModal() {
-  return `
-    <div class="modal-dim">
-      <div class="modal">
-        <div class="modal-head">
-          <div><h2>New Order!</h2><p class="subtle">You have a new delivery</p></div>
-          <div class="bag-icon">▣</div>
-        </div>
-        <div class="route-row"><span class="blue">●</span><div><span class="subtle">Pickup From</span><b>${order.store}</b><small class="subtle">0.8 km away</small></div></div>
-        <div class="route-row"><span class="blue">●</span><div><span class="subtle">Deliver To</span><b>${order.customer}</b><small class="subtle">2.6 km away</small></div></div>
-        <div class="payout"><div><span class="subtle">Order Payout</span><strong>${order.payout}</strong></div><span class="surge">⚡ Surge</span></div>
-        <p class="subtle" style="text-align:center">Accept in <b>00:12</b></p>
-        <button class="primary" data-accept>Accept Order</button>
-        <div style="height:10px"></div>
-        <button class="secondary" data-go="dashboard">Reject Order</button>
-      </div>
-    </div>
-  `;
-}
-
-function mapScreen() {
+function emptyWorkflow(title, message, back = "dashboard") {
   return shell(`
-    <div class="map-canvas"></div>
-    <div class="route-line"></div>
-    <div class="pin a" data-label="A"></div><div class="pin b" data-label="B"></div>
-    <div class="float-card turn"><b>↱ 1.2 km</b><br><span>Turn right towards 5th Main Rd</span></div>
-    <div class="route-actions"><button>⌖</button><button>↗</button><button>◎</button></div>
-    <div class="float-card map-bottom">
-      <div class="route-row"><span class="blue">●</span><div><span class="subtle">Pickup</span><b>${order.store}</b><small class="subtle">0.8 km - 3 min</small></div></div>
-      <div class="route-row"><span class="blue">●</span><div><span class="subtle">Drop</span><b>${order.customer}</b><small class="subtle">2.6 km - 8 min</small></div></div>
-      <button class="primary" data-go="details">End Navigation</button>
+    ${topbar(title, "", back)}
+    <div class="empty" style="height:260px">
+      <div><strong>${message}</strong><span>Only real backend data will be shown here.</span></div>
     </div>
-  `, { className: "map-screen" });
-}
-
-function details() {
-  return shell(`
-    ${topbar("Order Details", "", "dashboard")}
-    <div class="scroll">
-      <div class="info-list">
-        <div class="info-row"><div><span class="subtle">Order ID</span><b>${order.id}</b></div><span class="pill">Pick Up</span></div>
-        <div class="info-row"><div><span class="subtle">Pickup From</span><b>${order.store}</b><small class="subtle">${order.pickup}</small></div><button class="phone-btn">${icons.call}</button></div>
-        <div class="info-row"><div><span class="subtle">Deliver To</span><b>${order.customer}</b><small class="subtle">${order.drop}</small></div><button class="phone-btn">${icons.call}</button></div>
-      </div>
-      <div class="section-title">Order Items <span class="subtle" style="float:right">5 items</span></div>
-      <div class="items"><div class="item">🍎</div><div class="item">🥛</div><div class="item">🍞</div><div class="item">🍌</div><div class="item">+1</div></div>
-      <div class="card"><b>Order Note</b><p class="subtle">Please ring the bell. Don't call.</p></div>
-    </div>
-    <div class="fixed-bottom"><button class="primary swipe" data-go="pickup"><span>››</span>Order Picked Up</button></div>
-  `);
-}
-
-function pickup() {
-  return shell(`
-    ${topbar("Go to Store", "", "details")}
-    <div class="navigate-row"><div class="avatar"></div><div><b>${order.store}</b><small class="subtle">0.8 km away</small></div><button class="mini-primary" data-go="map">Navigate</button></div>
-    <div class="section-title">Store Details</div>
-    <div class="card">
-      <div class="info-row"><div><b>${order.store}</b><small class="subtle">${order.pickup}</small></div><button class="phone-btn">${icons.call}</button></div>
-      <button class="soft-btn" style="width:100%;margin-top:12px">${icons.call} Call Store</button>
-    </div>
-    <div class="card" style="margin-top:14px"><b>Instructions</b><p class="subtle">Go to the store and pick up the order.</p></div>
-    <div class="fixed-bottom"><button class="primary swipe" data-go="drop"><span>››</span>Order Picked Up</button></div>
-  `);
-}
-
-function drop() {
-  return shell(`
-    ${topbar("Go to Customer", "", "pickup")}
-    <div class="navigate-row"><div class="avatar"></div><div><b>${order.customer}</b><small class="subtle">2.6 km away</small></div><button class="mini-primary" data-go="map">Navigate</button></div>
-    <div class="section-title">Customer Details</div>
-    <div class="card">
-      <div class="info-row"><div><b>${order.customer}</b><small class="subtle">${order.drop}</small></div><button class="phone-btn">${icons.call}</button></div>
-      <button class="soft-btn" style="width:49%;margin-top:12px">${icons.call} Call</button>
-      <button class="soft-btn" style="width:49%;margin-top:12px">${icons.chat} Chat</button>
-    </div>
-    <div class="card" style="margin-top:14px"><b>Delivery Instructions</b><p class="subtle">Please ring the bell. Don't call.</p></div>
-    <div class="fixed-bottom"><button class="primary swipe" data-go="dashboard"><span>✓</span>Order Delivered</button></div>
-  `);
+    ${["earnings", "orders", "profile"].includes(state.current) ? tabbar(state.current) : ""}
+  `, { className: "scroll" });
 }
 
 function earnings() {
   return shell(`
-    ${topbar("Earnings", "<button class='icon-btn'>▦</button>", "dashboard")}
-    <div class="segments">${["daily","weekly","monthly"].map((tab) => `<button class="${state.earningsTab === tab ? "active" : ""}" data-earnings="${tab}">${tab[0].toUpperCase() + tab.slice(1)}</button>`).join("")}</div>
+    ${topbar("Earnings", "", "dashboard")}
     <span class="subtle">Today's Earnings</span>
-    <div class="money">₹1,245.80</div>
+    <div class="money">Rs 0.00</div>
     <div class="table">
-      <div><span>Order Earnings</span><b>₹965.80</b></div>
-      <div><span>Incentives</span><b>₹180.00</b></div>
-      <div><span>Tips</span><b>₹100.00</b></div>
-      <div><span>Adjustments</span><b>₹0.00</b></div>
+      <div><span>Order Earnings</span><b>Rs 0.00</b></div>
+      <div><span>Incentives</span><b>Rs 0.00</b></div>
+      <div><span>Tips</span><b>Rs 0.00</b></div>
+      <div><span>Adjustments</span><b>Rs 0.00</b></div>
     </div>
     <div class="section-title">Transactions</div>
-    ${["#DN1254876","#DN1254875","#DN1254874"].map((id, i) => `<div class="card order-card"><div><b>${id}</b><br><small class="subtle">0${i + 5}:4${i} AM</small></div><div><span class="verified">Delivered</span><br><b>₹${["46.50","38.40","42.30"][i]}</b></div></div>`).join("")}
+    <div class="empty"><div><strong>No earnings yet</strong><span>Completed orders will appear here</span></div></div>
     ${tabbar("earnings")}
   `, { className: "scroll" });
 }
 
 function orders() {
-  const data = state.ordersTab === "completed"
-    ? [["#DN1254876", "Delivered", "₹46.50", "green"], ["#DN1254875", "Delivered", "₹38.40", "green"], ["#DN1254874", "Delivered", "₹42.30", "green"]]
-    : [["#DN1254869", "Cancelled", "₹0.00", "red"], ["#DN1254864", "Cancelled", "₹0.00", "red"]];
   return shell(`
-    ${topbar("My Orders", "<button class='icon-btn'>▦</button>", "dashboard")}
-    <div class="segments" style="grid-template-columns:repeat(2,1fr)"><button class="${state.ordersTab === "completed" ? "active" : ""}" data-orders="completed">Completed</button><button class="${state.ordersTab === "cancelled" ? "active" : ""}" data-orders="cancelled">Cancelled</button></div>
-    ${data.map(([id, status, pay, color]) => `<div class="card order-card"><div><b>${id}</b><br><small class="subtle">Today, 09:15 AM</small></div><div><span class="${color}">${status}</span><br><b>${pay}</b></div></div>`).join("")}
+    ${topbar("My Orders", "", "dashboard")}
+    <div class="segments" style="grid-template-columns:repeat(2,1fr)">
+      <button class="${state.ordersTab === "completed" ? "active" : ""}" data-orders="completed">Completed</button>
+      <button class="${state.ordersTab === "cancelled" ? "active" : ""}" data-orders="cancelled">Cancelled</button>
+    </div>
+    <div class="empty"><div><strong>No orders yet</strong><span>Assigned orders will appear here</span></div></div>
     ${tabbar("orders")}
   `, { className: "scroll" });
 }
@@ -265,66 +166,9 @@ function orders() {
 function profile() {
   return shell(`
     ${topbar("Profile", "", "dashboard")}
-    <div class="profile-head"><div class="avatar"></div><div><b>Amit Kumar <span class="star">★ 4.8</span></b><br><small class="subtle">Rider ID: RID12548</small></div><span class="pill">Verified</span></div>
-    <div class="menu">
-      <button><span>${icons.profile}</span><b>Personal Info</b><span class="chev">›</span></button>
-      <button data-go="vehicle"><span>${icons.bike}</span><b>Vehicle Info</b><span>Bike ›</span></button>
-      <button data-go="documents"><span>${icons.doc}</span><b>Documents</b><span class="chev">›</span></button>
-      <button><span>${icons.bank}</span><b>Bank Details</b><span class="chev">›</span></button>
-      <button><span>${icons.star}</span><b>Ratings</b><span>4.8 ›</span></button>
-      <button data-go="settings"><span>⚙</span><b>Settings</b><span class="chev">›</span></button>
-      <button data-go="support"><span>${icons.help}</span><b>Help & Support</b><span class="chev">›</span></button>
-    </div>
+    <div class="profile-head"><div class="avatar"></div><div><b>${state.signupName || "Rider Partner"}</b><br><small class="subtle">Rider ID: Pending</small></div><span class="pill">Pending</span></div>
+    <div class="empty"><div><strong>No approved profile yet</strong><span>Admin approval is required.</span></div></div>
     ${tabbar("profile")}
-  `);
-}
-
-function vehicle() {
-  return shell(`
-    ${topbar("Vehicle Info", "", "profile")}
-    <div class="menu">
-      ${[["Vehicle Type","Bike"],["Vehicle Number","KA 01 AB 1234"],["Brand","Hero Passion Pro"],["Model","2021"],["Color","Black"]].map(([a,b]) => `<div class="menu-row"><span></span><b>${a}</b><span>${b} ›</span></div>`).join("")}
-    </div>
-    <div class="fixed-bottom"><button class="soft-btn" style="width:100%">✎ Edit Vehicle Info</button></div>
-  `);
-}
-
-function documents() {
-  return shell(`
-    ${topbar("Documents", "", "profile")}
-    <div class="menu">
-      ${[["Aadhar Card","Verified"],["Driving License","Verified"],["Vehicle RC","Verified"],["Insurance","Valid till 10/05/2026"],["Pollution Certificate","Valid till 10/01/2026"]].map(([a,b]) => `<button><span>${icons.doc}</span><b>${a}</b><span class="verified">${b} ›</span></button>`).join("")}
-    </div>
-    <div class="fixed-bottom"><button class="soft-btn" style="width:100%">Upload New Document</button></div>
-  `);
-}
-
-function settings() {
-  return shell(`
-    ${topbar("Settings", "", "profile")}
-    <div class="settings-row"><span>Online / Offline Auto</span><button class="toggle small"></button></div>
-    <div class="settings-row"><span>Order Notification</span><button class="toggle small"></button></div>
-    <div class="settings-row"><span>Sound</span><button class="toggle small"></button></div>
-    <div class="settings-row"><span>Language</span><span>English ›</span></div>
-    <div class="settings-row"><span>Dark Mode</span><button class="toggle small ${state.dark ? "" : "off"}" id="darkToggle"></button></div>
-    <div class="settings-row"><span>Privacy Policy</span><span>›</span></div>
-    <div class="settings-row"><span>Terms & Conditions</span><span>›</span></div>
-    <button class="settings-row danger" id="logout" style="background:transparent;width:100%;text-align:left;margin-top:20px">↪ Log Out</button>
-  `);
-}
-
-function support() {
-  return shell(`
-    ${topbar("Help & Support", "", "profile")}
-    <p class="subtle" style="margin-top:-6px">How can we help you?</p>
-    <div class="menu">
-      <button><span>${icons.help}</span><b>Help Center</b><span class="chev">›</span></button>
-      <button><span>!</span><b>Report an issue</b><span class="chev">›</span></button>
-      <button><span>${icons.call}</span><b>Call Support</b><span class="subtle">+91 98765 43210 ›</span></button>
-      <button><span>${icons.chat}</span><b>Chat Support</b><span class="verified">We are online ›</span></button>
-      <button><span>${icons.star}</span><b>Rate the App</b><span class="chev">›</span></button>
-      <button><span>${icons.info}</span><b>About App</b><span class="subtle">Version 1.0.0 ›</span></button>
-    </div>
   `);
 }
 
@@ -333,19 +177,19 @@ const views = {
   login,
   signup,
   otp,
-  dashboard: () => dashboard(false),
-  orderPopup: () => dashboard(true),
-  map: mapScreen,
-  details,
-  pickup,
-  drop,
+  dashboard,
+  orderPopup: dashboard,
+  map: () => emptyWorkflow("Map", "No active route yet"),
+  details: () => emptyWorkflow("Order Details", "No assigned order yet"),
+  pickup: () => emptyWorkflow("Pickup", "No pickup assigned yet"),
+  drop: () => emptyWorkflow("Delivery", "No delivery assigned yet"),
   earnings,
   orders,
   profile,
-  vehicle,
-  documents,
-  settings,
-  support,
+  vehicle: () => emptyWorkflow("Vehicle Info", "No approved vehicle record yet", "profile"),
+  documents: () => emptyWorkflow("Documents", "No documents uploaded yet", "profile"),
+  settings: () => emptyWorkflow("Settings", "No settings configured yet", "profile"),
+  support: () => emptyWorkflow("Help & Support", "No support tickets yet", "profile"),
 };
 
 function render() {
@@ -359,15 +203,11 @@ document.addEventListener("click", (event) => {
     setScreen(go.dataset.go);
     return;
   }
-  if (event.target.closest("[data-accept]")) {
-    state.orderAccepted = true;
-    setScreen("details");
-    return;
-  }
+
   const key = event.target.closest(".otp-key");
   if (key) {
     const value = key.textContent.trim();
-    if (value === "⌫") state.otp.pop();
+    if (value === "Del") state.otp.pop();
     if (/^\d$/.test(value) && state.otp.length < 6) state.otp.push(value);
     if (state.otp.length === 6) {
       localStorage.setItem("riderLoggedIn", "true");
@@ -376,35 +216,53 @@ document.addEventListener("click", (event) => {
     render();
     return;
   }
-  const earnings = event.target.closest("[data-earnings]");
-  if (earnings) {
-    state.earningsTab = earnings.dataset.earnings;
+
+  const ordersTab = event.target.closest("[data-orders]");
+  if (ordersTab) {
+    state.ordersTab = ordersTab.dataset.orders;
     render();
     return;
   }
-  const orders = event.target.closest("[data-orders]");
-  if (orders) {
-    state.ordersTab = orders.dataset.orders;
-    render();
+
+  if (event.target.id === "continueLogin") {
+    if (state.phone.length !== 10) {
+      const field = document.querySelector(".field");
+      field.style.borderColor = "var(--red)";
+      field.querySelector("input").placeholder = "Enter a valid 10-digit number";
+      return;
+    }
+    if (!state.registeredNumbers.includes(state.phone)) {
+      setScreen("signup");
+      return;
+    }
+    if (!state.approvedNumbers.includes(state.phone)) {
+      alert("Your rider registration is pending admin approval.");
+      return;
+    }
+    state.otp = [];
+    setScreen("otp");
     return;
   }
-  if (event.target.id === "darkToggle") {
-    state.dark = !state.dark;
-    render();
+
+  if (event.target.id === "submitSignup") {
+    const valid = state.signupName.trim().length >= 2 && state.phone.length === 10 && state.signupVehicle.trim().length >= 4;
+    if (valid) {
+      if (!state.registeredNumbers.includes(state.phone)) state.registeredNumbers.push(state.phone);
+      localStorage.setItem("registeredRiders", JSON.stringify(state.registeredNumbers));
+      alert("Registration submitted. Admin approval is required before login.");
+      setScreen("login");
+    }
     return;
   }
-  if (event.target.id === "logout") {
-    localStorage.removeItem("riderLoggedIn");
-    setScreen("login");
+
+  if (event.target.id === "onlineToggle") {
+    state.online = !state.online;
+    render();
   }
 });
 
 document.addEventListener("input", (event) => {
-  if (event.target.id === "phoneInput") {
-    state.phone = event.target.value.replace(/\D/g, "").slice(0, 10);
-    event.target.value = state.phone;
-  }
-  if (event.target.id === "signupPhone") {
+  if (event.target.id === "phoneInput" || event.target.id === "signupPhone") {
     state.phone = event.target.value.replace(/\D/g, "").slice(0, 10);
     event.target.value = state.phone;
   }
@@ -412,41 +270,6 @@ document.addEventListener("input", (event) => {
   if (event.target.id === "signupVehicle") {
     state.signupVehicle = event.target.value.toUpperCase();
     event.target.value = state.signupVehicle;
-  }
-});
-
-document.addEventListener("click", (event) => {
-  if (event.target.id === "continueLogin") {
-    const valid = state.phone.length === 10;
-    if (valid) {
-      if (!state.registeredNumbers.includes(state.phone)) {
-        setScreen("signup");
-        return;
-      }
-      if (!state.approvedNumbers.includes(state.phone)) {
-        alert("Your rider registration is pending admin approval.");
-        return;
-      }
-      state.otp = [];
-      setScreen("otp");
-    } else {
-      const field = document.querySelector(".field");
-      field.style.borderColor = "var(--red)";
-      field.querySelector("input").placeholder = "Enter a valid 10-digit number";
-    }
-  }
-  if (event.target.id === "submitSignup") {
-    const valid = state.signupName.trim().length >= 2 && state.phone.length === 10 && state.signupVehicle.trim().length >= 4;
-    if (valid) {
-      if (!state.registeredNumbers.includes(state.phone)) state.registeredNumbers.push(state.phone);
-      state.otp = [];
-      alert("Registration submitted. Admin approval is required before login.");
-      setScreen("login");
-    }
-  }
-  if (event.target.id === "onlineToggle") {
-    state.online = !state.online;
-    render();
   }
 });
 

@@ -13,12 +13,28 @@ const DashboardScreen = () => {
   const [isOnline, setIsOnline] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState(null);
+  const [summary, setSummary] = useState({
+    completed: 0,
+    totalEarnings: 0,
+    orderCount: 0,
+  });
 
   useEffect(() => {
     let mounted = true;
-    riderApi.profile()
-      .then((response) => {
-        if (mounted) setIsOnline(Boolean(response.data?.online_status));
+    Promise.all([
+      riderApi.profile(),
+      riderApi.earnings().catch(() => ({ data: { total: 0, transactions: [] } })),
+      riderApi.orders().catch(() => ({ data: { orders: [] } })),
+    ])
+      .then(([profileResponse, earningsResponse, ordersResponse]) => {
+        if (!mounted) return;
+        const orders = ordersResponse.data?.orders || [];
+        setIsOnline(Boolean(profileResponse.data?.online_status));
+        setSummary({
+          completed: orders.filter((order) => order.status === 'DELIVERED').length,
+          totalEarnings: Number(earningsResponse.data?.total || 0),
+          orderCount: orders.length,
+        });
       })
       .catch(() => {
         if (mounted) setError('Unable to load rider status.');
@@ -69,23 +85,23 @@ const DashboardScreen = () => {
         <View style={styles.earningsCard}>
           <View>
             <Text style={styles.earningsLabel}>Today's Earnings</Text>
-            <Text style={styles.earningsAmount}>Rs 1,245.80</Text>
-            <Text style={styles.earningsSubtext}>6 Orders Completed</Text>
+            <Text style={styles.earningsAmount}>Rs {summary.totalEarnings.toFixed(2)}</Text>
+            <Text style={styles.earningsSubtext}>{summary.orderCount} Orders Assigned</Text>
           </View>
           <Text style={styles.earningsIcon}>Pay</Text>
         </View>
 
         <View style={styles.metricsContainer}>
           <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>06</Text>
+            <Text style={styles.metricValue}>{String(summary.completed).padStart(2, '0')}</Text>
             <Text style={styles.metricLabel}>Completed</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>01:45</Text>
+            <Text style={styles.metricValue}>{isOnline ? 'Live' : 'Off'}</Text>
             <Text style={styles.metricLabel}>Hours Online</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>Rs 180</Text>
+            <Text style={styles.metricValue}>Rs 0</Text>
             <Text style={styles.metricLabel}>Incentive</Text>
           </View>
         </View>
