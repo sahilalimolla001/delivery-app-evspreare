@@ -5,12 +5,24 @@ import { auditLog } from "../services/auditService.js";
 export const adminRouter = express.Router();
 
 adminRouter.get("/dashboard", async (_req, res) => {
-  const [orders, riders, revenue] = await Promise.all([
+  const [orders, riders, revenue, users, documents, tickets, earnings] = await Promise.all([
     query("SELECT status, count(*)::int FROM orders GROUP BY status"),
     query("SELECT online_status, approval_status, count(*)::int FROM riders GROUP BY online_status, approval_status"),
     query("SELECT COALESCE(sum(total_payout), 0)::numeric AS revenue FROM orders WHERE status = 'DELIVERED'"),
+    query("SELECT count(*)::int FROM users"),
+    query("SELECT status, count(*)::int FROM documents GROUP BY status"),
+    query("SELECT status, count(*)::int FROM support_tickets GROUP BY status"),
+    query("SELECT COALESCE(sum(total), 0)::numeric AS total FROM earnings"),
   ]);
-  res.json({ orders: orders.rows, riders: riders.rows, revenue: revenue.rows[0].revenue });
+  res.json({
+    orders: orders.rows,
+    riders: riders.rows,
+    revenue: revenue.rows[0].revenue,
+    users: users.rows[0].count,
+    documents: documents.rows,
+    tickets: tickets.rows,
+    earnings: earnings.rows[0].total,
+  });
 });
 
 adminRouter.get("/riders", async (req, res) => {
@@ -41,6 +53,100 @@ adminRouter.get("/riders", async (req, res) => {
     params,
   );
   res.json({ riders: rows });
+});
+
+adminRouter.get("/orders", async (_req, res) => {
+  const { rows } = await query(
+    `SELECT o.id, o.public_id, o.status, o.total_payout, o.assigned_at, o.delivered_at, o.created_at,
+            s.name AS store_name, c.name AS customer_name, u.name AS rider_name, u.phone AS rider_phone
+     FROM orders o
+     JOIN stores s ON s.id = o.store_id
+     JOIN customers c ON c.id = o.customer_id
+     LEFT JOIN riders r ON r.id = o.rider_id
+     LEFT JOIN users u ON u.id = r.user_id
+     ORDER BY o.created_at DESC
+     LIMIT 500`,
+  );
+  res.json({ orders: rows });
+});
+
+adminRouter.get("/earnings", async (_req, res) => {
+  const { rows } = await query(
+    `SELECT e.id, e.total, e.base_pay, e.distance_pay, e.surge, e.bonus, e.tips, e.created_at,
+            o.public_id AS order_public_id, u.name AS rider_name, u.phone AS rider_phone
+     FROM earnings e
+     JOIN riders r ON r.id = e.rider_id
+     JOIN users u ON u.id = r.user_id
+     LEFT JOIN orders o ON o.id = e.order_id
+     ORDER BY e.created_at DESC
+     LIMIT 500`,
+  );
+  res.json({ earnings: rows });
+});
+
+adminRouter.get("/documents", async (_req, res) => {
+  const { rows } = await query(
+    `SELECT d.id, d.type, d.file_url, d.status, d.expires_at, d.created_at,
+            u.name AS rider_name, u.phone AS rider_phone
+     FROM documents d
+     JOIN riders r ON r.id = d.rider_id
+     JOIN users u ON u.id = r.user_id
+     ORDER BY d.created_at DESC
+     LIMIT 500`,
+  );
+  res.json({ documents: rows });
+});
+
+adminRouter.post("/documents/:id/approve", async (req, res) => {
+  const { rows } = await query("UPDATE documents SET status = 'APPROVED', reviewed_at = now() WHERE id = $1 RETURNING *", [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: "DOCUMENT_NOT_FOUND" });
+  await auditLog({
+    actorUserId: req.auth.sub,
+    action: "DOCUMENT_APPROVED",
+    entityType: "DOCUMENT",
+    entityId: req.params.id,
+    requestId: req.requestId,
+  });
+  res.json({ document: rows[0] });
+});
+
+adminRouter.post("/documents/:id/reject", async (req, res) => {
+  const { rows } = await query("UPDATE documents SET status = 'REJECTED', reviewed_at = now() WHERE id = $1 RETURNING *", [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: "DOCUMENT_NOT_FOUND" });
+  await auditLog({
+    actorUserId: req.auth.sub,
+    action: "DOCUMENT_REJECTED",
+    entityType: "DOCUMENT",
+    entityId: req.params.id,
+    requestId: req.requestId,
+  });
+  res.json({ document: rows[0] });
+});
+
+adminRouter.get("/support", async (_req, res) => {
+  const { rows } = await query(
+    `SELECT t.id, t.title, t.description, t.status, t.priority, t.created_at, t.updated_at,
+            u.name AS rider_name, u.phone AS rider_phone
+     FROM support_tickets t
+     JOIN riders r ON r.id = t.rider_id
+     JOIN users u ON u.id = r.user_id
+     ORDER BY t.created_at DESC
+     LIMIT 500`,
+  );
+  res.json({ tickets: rows });
+});
+
+adminRouter.post("/support/:id/resolve", async (req, res) => {
+  const { rows } = await query("UPDATE support_tickets SET status = 'RESOLVED', updated_at = now() WHERE id = $1 RETURNING *", [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: "TICKET_NOT_FOUND" });
+  await auditLog({
+    actorUserId: req.auth.sub,
+    action: "SUPPORT_TICKET_RESOLVED",
+    entityType: "SUPPORT_TICKET",
+    entityId: req.params.id,
+    requestId: req.requestId,
+  });
+  res.json({ ticket: rows[0] });
 });
 
 adminRouter.post("/riders/:id/approve", async (req, res) => {

@@ -57,7 +57,10 @@ app.get("/ready", async (_req, res) => {
   }
 });
 
-app.get(["/admin", "/admin/"], (_req, res) => {
+app.get("/admin", (_req, res) => {
+  res.redirect(308, "/admin/");
+});
+app.get("/admin/", (_req, res) => {
   res.sendFile(path.join(adminPanelDir, "index.html"));
 });
 app.get("/admin/config.js", (_req, res) => {
