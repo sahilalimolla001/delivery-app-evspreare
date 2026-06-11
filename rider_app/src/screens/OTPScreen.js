@@ -15,8 +15,7 @@ const OTPScreen = ({ navigation, route }) => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(30);
   const inputs = React.useRef([]);
-  const { verifyOtp, sendOtp, isLoading, error, clearError, otpChallenge } = useAuthStore();
-  const devOtp = otpChallenge?.phone === phone ? otpChallenge.devOtp : null;
+  const { verifyOtp, sendOtp, isLoading, error, clearError } = useAuthStore();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -94,13 +93,6 @@ const OTPScreen = ({ navigation, route }) => {
         <Text style={styles.subtitle}>
           We've sent a 6 digit code to {phone}
         </Text>
-
-        {devOtp ? (
-          <View style={styles.devOtpBox}>
-            <Text style={styles.devOtpLabel}>Development OTP</Text>
-            <Text style={styles.devOtpCode}>{devOtp}</Text>
-          </View>
-        ) : null}
 
         {/* OTP Input Fields */}
         <View style={styles.otpContainer}>
@@ -213,27 +205,6 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 12,
     marginBottom: 24,
-  },
-  devOtpBox: {
-    backgroundColor: '#E3F2FD',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#1E5BA8',
-  },
-  devOtpLabel: {
-    color: '#1E5BA8',
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  devOtpCode: {
-    color: '#000',
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 2,
   },
   errorText: {
     color: '#C62828',

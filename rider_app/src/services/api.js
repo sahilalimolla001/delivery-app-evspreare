@@ -9,6 +9,8 @@ const ERROR_MESSAGES = {
   OTP_VERIFICATION_FAILED: 'We could not verify the OTP. Please try again.',
   INVALID_OTP: 'The OTP is incorrect or expired.',
   RIDER_SIGNUP_REQUIRED: 'This number is not registered as a rider. Please sign up first.',
+  RIDER_APPROVAL_PENDING: 'Your rider registration is pending admin approval.',
+  RIDER_SUSPENDED: 'Your rider account is suspended. Please contact support.',
   RIDER_SIGNUP_FAILED: 'We could not create your signup. Please try again.',
   VALIDATION_ERROR: 'Please check the entered details.',
   AUTH_REQUIRED: 'Please login again.',

@@ -52,6 +52,7 @@ authRouter.post("/rider-status", validate(Joi.object({
     phone,
     exists: Boolean(rider),
     approvalStatus: rider?.approval_status || null,
+    canLogin: rider?.approval_status === "APPROVED",
   });
 });
 
@@ -136,6 +137,12 @@ authRouter.post("/verify-otp", otpLimiter, validate(Joi.object({
   );
   if (!rows[0]) return res.status(403).json({ error: "RIDER_SIGNUP_REQUIRED" });
   const user = rows[0];
+  if (user.approval_status !== "APPROVED") {
+    return res.status(403).json({
+      error: user.approval_status === "SUSPENDED" ? "RIDER_SUSPENDED" : "RIDER_APPROVAL_PENDING",
+      approvalStatus: user.approval_status,
+    });
+  }
   const token = signToken({ sub: user.id, phone: user.phone });
   return res.json({ token, user });
 });

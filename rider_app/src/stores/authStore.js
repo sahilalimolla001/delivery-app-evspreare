@@ -144,6 +144,7 @@ export const useAuthStore = create((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+  setError: (message) => set({ error: message }),
 
   checkAuth: async () => get().initializeAuth(),
 }));

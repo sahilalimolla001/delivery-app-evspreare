@@ -289,31 +289,3 @@ body.dark .empty, body.dark .welcome-asset, body.dark .navigate-row { background
 .field.single input {
   padding-left: 0;
 }
-
-.signup-spacer,
-.signup-spacer + .secondary,
-.signup-spacer + .secondary + div,
-.signup-spacer + .secondary + div + .secondary {
-  display: none;
-}
-
-.dev-otp {
-  margin: 18px 0 0;
-  padding: 12px;
-  border-radius: 10px;
-  background: #eaf2ff;
-  border-left: 4px solid var(--blue);
-}
-
-.dev-otp span {
-  display: block;
-  color: var(--blue);
-  font-size: 11px;
-  font-weight: 850;
-  margin-bottom: 3px;
-}
-
-.dev-otp b {
-  letter-spacing: 2px;
-  font-size: 20px;
-}

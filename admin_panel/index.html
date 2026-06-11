@@ -3,49 +3,27 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Quick Commerce Admin</title>
+    <title>evspeare Admin</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <aside>
-      <h1>Quick Commerce</h1>
-      <button class="active">Dashboard</button>
-      <button>Rider Management</button>
-      <button>Order Management</button>
-      <button>Documents</button>
-      <button>Support</button>
+      <h1>evspeare</h1>
+      <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+      <button class="nav-btn" data-view="online">Online Riders</button>
+      <button class="nav-btn" data-view="registered">Registered Riders</button>
+      <button class="nav-btn" data-view="approval">Approvals</button>
     </aside>
     <main>
       <header>
         <div>
           <p>Admin Panel</p>
-          <h2>Operations Dashboard</h2>
+          <h2 id="pageTitle">Operations Dashboard</h2>
         </div>
-        <button>Export</button>
+        <button id="refreshBtn">Refresh</button>
       </header>
-      <section class="metrics">
-        <article><span>Total Orders</span><strong>12,480</strong><small>+18% this week</small></article>
-        <article><span>Revenue</span><strong>₹18.4L</strong><small>Delivered GMV</small></article>
-        <article><span>Online Riders</span><strong>342</strong><small>Live right now</small></article>
-        <article><span>Active Riders</span><strong>1,280</strong><small>Approved fleet</small></article>
-      </section>
-      <section class="grid">
-        <article class="panel">
-          <h3>Live Orders</h3>
-          <table>
-            <tr><th>Order</th><th>Rider</th><th>Status</th><th>Payout</th></tr>
-            <tr><td>#DN1254876</td><td>Amit Kumar</td><td>Going to store</td><td>₹46.50</td></tr>
-            <tr><td>#DN1254875</td><td>Priya Singh</td><td>Picked up</td><td>₹38.40</td></tr>
-            <tr><td>#DN1254874</td><td>Rohit Das</td><td>Delivered</td><td>₹42.30</td></tr>
-          </table>
-        </article>
-        <article class="panel">
-          <h3>Document Queue</h3>
-          <div class="queue"><span>Aadhaar OCR match</span><button>Approve</button></div>
-          <div class="queue"><span>Insurance expiring</span><button>Review</button></div>
-          <div class="queue"><span>Vehicle RC mismatch</span><button>Reject</button></div>
-        </article>
-      </section>
+      <section id="content"></section>
     </main>
+    <script src="admin.js"></script>
   </body>
 </html>

@@ -1,45 +1,80 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
-  TouchableOpacity,
+  StyleSheet,
   Switch,
+  Text,
+  View,
 } from 'react-native';
+import { riderApi } from '../services/api';
 
-const DashboardScreen = ({ navigation }) => {
+const DashboardScreen = () => {
   const [isOnline, setIsOnline] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    riderApi.profile()
+      .then((response) => {
+        if (mounted) setIsOnline(Boolean(response.data?.online_status));
+      })
+      .catch(() => {
+        if (mounted) setError('Unable to load rider status.');
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleOnlineChange = async (nextValue) => {
+    setIsUpdating(true);
+    setError(null);
+    try {
+      if (nextValue) {
+        await riderApi.goOnline(0, 0);
+      } else {
+        await riderApi.goOffline();
+      }
+      setIsOnline(nextValue);
+    } catch {
+      setError('Could not update online status. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>You are {isOnline ? 'Online' : 'Offline'}</Text>
-            <Text style={styles.subtitle}>Ready for deliveries?</Text>
+            <Text style={styles.subtitle}>
+              {isOnline ? 'Admin can see you as available.' : 'Go online to receive orders.'}
+            </Text>
           </View>
           <Switch
             value={isOnline}
-            onValueChange={setIsOnline}
+            onValueChange={handleOnlineChange}
+            disabled={isUpdating}
             trackColor={{ false: '#ddd', true: '#81C784' }}
             thumbColor={isOnline ? '#4CAF50' : '#f4f3f4'}
           />
         </View>
 
-        {/* Earnings Card */}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
         <View style={styles.earningsCard}>
           <View>
             <Text style={styles.earningsLabel}>Today's Earnings</Text>
-            <Text style={styles.earningsAmount}>₹1,245.80</Text>
+            <Text style={styles.earningsAmount}>Rs 1,245.80</Text>
             <Text style={styles.earningsSubtext}>6 Orders Completed</Text>
           </View>
-          <Text style={styles.earningsIcon}>💰</Text>
+          <Text style={styles.earningsIcon}>Pay</Text>
         </View>
 
-        {/* Metrics */}
         <View style={styles.metricsContainer}>
           <View style={styles.metricCard}>
             <Text style={styles.metricValue}>06</Text>
@@ -50,17 +85,16 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={styles.metricLabel}>Hours Online</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={styles.metricValue}>₹180</Text>
+            <Text style={styles.metricValue}>Rs 180</Text>
             <Text style={styles.metricLabel}>Incentive</Text>
           </View>
         </View>
 
-        {/* New Order Section */}
         <Text style={styles.sectionTitle}>New Orders</Text>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>📦</Text>
+          <Text style={styles.emptyIcon}>Box</Text>
           <Text style={styles.emptyText}>No new orders at the moment</Text>
-          <Text style={styles.emptySubtext}>Go online to see available orders</Text>
+          <Text style={styles.emptySubtext}>{isOnline ? 'Waiting for assignment' : 'Go online to see available orders'}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -81,7 +115,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 18,
     paddingHorizontal: 12,
   },
   greeting: {
@@ -93,6 +127,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginTop: 4,
+  },
+  errorText: {
+    color: '#C62828',
+    fontSize: 13,
+    marginBottom: 12,
+    paddingHorizontal: 12,
   },
   earningsCard: {
     backgroundColor: '#1E5BA8',
@@ -120,7 +160,9 @@ const styles = StyleSheet.create({
     color: '#B8D5E8',
   },
   earningsIcon: {
-    fontSize: 48,
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '800',
   },
   metricsContainer: {
     flexDirection: 'row',
@@ -157,7 +199,9 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   emptyIcon: {
-    fontSize: 60,
+    color: '#1E5BA8',
+    fontSize: 20,
+    fontWeight: '800',
     marginBottom: 12,
   },
   emptyText: {

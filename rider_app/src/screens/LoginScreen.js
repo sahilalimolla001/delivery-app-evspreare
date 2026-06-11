@@ -12,7 +12,7 @@ import { useAuthStore } from '../stores/authStore';
 
 const LoginScreen = ({ navigation }) => {
   const [phone, setPhone] = useState('');
-  const { checkRiderStatus, sendOtp, isLoading, error, clearError } = useAuthStore();
+  const { checkRiderStatus, sendOtp, isLoading, error, clearError, setError } = useAuthStore();
 
   const handleContinue = async () => {
     if (phone.length !== 10 || isLoading) return;
@@ -22,6 +22,12 @@ const LoginScreen = ({ navigation }) => {
       const status = await checkRiderStatus(phone);
       if (!status.exists) {
         navigation.navigate('Signup', { phone });
+        return;
+      }
+      if (!status.canLogin) {
+        setError(status.approvalStatus === 'SUSPENDED'
+          ? 'Your rider account is suspended. Please contact support.'
+          : 'Your rider registration is pending admin approval.');
         return;
       }
 

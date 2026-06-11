@@ -7,6 +7,8 @@ const state = {
   signupName: "",
   signupVehicle: "",
   registeredNumbers: ["9876543210"],
+  approvedNumbers: ["9876543210"],
+  online: false,
   otp: ["2", "4", "6", "8", "1", "3"],
   orderAccepted: false,
   dark: false,
@@ -91,10 +93,6 @@ function login() {
     <img class="login-logo" src="rider_app/assets/icon.png" alt="evspeare">
     <label class="field"><b>+91</b><input id="phoneInput" inputmode="numeric" maxlength="10" placeholder="Enter mobile number" value="${state.phone}"></label>
     <button class="primary" id="continueLogin">Continue</button>
-    <div class="signup-spacer"></div>
-    <button class="secondary social-login" data-go="dashboard">Login with Google</button>
-    <div style="height:10px"></div>
-    <button class="secondary" data-go="dashboard">●&nbsp; Login with Apple</button>
     <p class="bottom-note">New delivery partner? <span class="tiny-link" data-go="signup">Sign up for verification</span></p>
   `);
 }
@@ -118,7 +116,6 @@ function otp() {
     ${topbar("", "", "login")}
     <h2>Verify OTP</h2>
     <p class="subtle">We've sent a 6 digit code to<br><b style="color:#101828">+91 ${state.phone || "98765 43210"}</b> <span class="tiny-link" data-go="login">Change</span></p>
-    <div class="dev-otp"><span>Development OTP</span><b>246813</b></div>
     <div class="otp-row">${digits.map((num) => `<div class="otp-box">${num}</div>`).join("")}</div>
     <p class="subtle" style="text-align:center">Resend OTP in <span id="timer">00:25</span></p>
     <div class="keypad">
@@ -131,8 +128,8 @@ function dashboard(withModal = false) {
   return shell(`
     <div class="topbar">
       <button class="icon-btn">☰</button>
-      <div class="online"><span class="dot"></span>You are <span class="green">Online</span></div>
-      <button class="toggle" id="onlineToggle" aria-label="Online toggle"></button>
+      <div class="online"><span class="dot ${state.online ? "" : "off"}"></span>You are <span class="${state.online ? "green" : "red"}">${state.online ? "Online" : "Offline"}</span></div>
+      <button class="toggle ${state.online ? "" : "off"}" id="onlineToggle" aria-label="Online toggle"></button>
     </div>
     <div class="earn-card">
       <span>Today's Earnings</span>
@@ -426,6 +423,10 @@ document.addEventListener("click", (event) => {
         setScreen("signup");
         return;
       }
+      if (!state.approvedNumbers.includes(state.phone)) {
+        alert("Your rider registration is pending admin approval.");
+        return;
+      }
       state.otp = [];
       setScreen("otp");
     } else {
@@ -439,8 +440,13 @@ document.addEventListener("click", (event) => {
     if (valid) {
       if (!state.registeredNumbers.includes(state.phone)) state.registeredNumbers.push(state.phone);
       state.otp = [];
-      setScreen("otp");
+      alert("Registration submitted. Admin approval is required before login.");
+      setScreen("login");
     }
+  }
+  if (event.target.id === "onlineToggle") {
+    state.online = !state.online;
+    render();
   }
 });
 

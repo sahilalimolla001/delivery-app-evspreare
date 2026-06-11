@@ -5,10 +5,11 @@ const path = require('path');
 const publicDir = __dirname;
 const port = Number(process.env.PORT || 8001);
 const host = process.env.HOST || '0.0.0.0';
-const allowedFiles = new Set(['/index.html', '/styles.css']);
+const allowedFiles = new Set(['/index.html', '/styles.css', '/admin.js']);
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
 };
 
 function send(res, statusCode, body, headers = {}) {

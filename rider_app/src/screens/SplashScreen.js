@@ -4,6 +4,7 @@ import {
   Image,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -27,15 +28,11 @@ const SplashScreen = ({ navigation }) => {
       }),
     ]).start();
 
-    const timer = setTimeout(() => {
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
-    }, 1800);
-
-    return () => clearTimeout(timer);
   }, [fadeAnim, navigation, slideAnim]);
+
+  const handleStart = () => {
+    navigation.navigate('Login');
+  };
 
   return (
     <View style={styles.container}>
@@ -50,6 +47,9 @@ const SplashScreen = ({ navigation }) => {
       >
         <Image source={logo} style={styles.logo} resizeMode="contain" />
         <Text style={styles.subtitle}>Delivery Partner</Text>
+        <TouchableOpacity style={styles.startButton} onPress={handleStart}>
+          <Text style={styles.startText}>Start Riding</Text>
+        </TouchableOpacity>
       </Animated.View>
     </View>
   );
@@ -79,6 +79,18 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     textTransform: 'uppercase',
     marginTop: 18,
+  },
+  startButton: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    marginTop: 34,
+  },
+  startText: {
+    color: '#075DFF',
+    fontSize: 16,
+    fontWeight: '800',
   },
 });
 
