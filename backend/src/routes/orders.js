@@ -27,6 +27,7 @@ ordersRouter.post("/accept-order", validate(Joi.object({
   orderId: Joi.string().uuid().required(),
 })), async (req, res) => {
   const rider = await getRider(req.auth.sub);
+  if (!rider?.online_status) return res.status(409).json({ error: "RIDER_OFFLINE" });
   const { rows } = await query(
     `UPDATE orders
      SET status = 'GOING_TO_STORE', updated_at = now()
@@ -124,7 +125,7 @@ ordersRouter.post("/deliver-order", validate(Joi.object({
     metadata: { latitude: req.body.latitude, longitude: req.body.longitude },
     requestId: req.requestId,
   });
-  const nextOrder = await assignNextPendingOrder(rider.id);
+  const nextOrder = rider.online_status ? await assignNextPendingOrder(rider.id) : null;
   res.json({ order: rows[0], otpVerified: true, nextOrder });
 });
 

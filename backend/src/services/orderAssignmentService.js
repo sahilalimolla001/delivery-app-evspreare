@@ -72,6 +72,13 @@ export async function assignOrderToRider({ orderId, riderId }) {
     `UPDATE orders
      SET rider_id = $2, status = 'ASSIGNED', assigned_at = now(), updated_at = now()
      WHERE id = $1 AND status IN ('PENDING', 'ASSIGNED')
+       AND EXISTS (
+         SELECT 1
+         FROM riders r
+         WHERE r.id = $2
+           AND r.online_status = true
+           AND r.approval_status = 'APPROVED'
+       )
        AND NOT EXISTS (
          SELECT 1
          FROM orders active_orders
