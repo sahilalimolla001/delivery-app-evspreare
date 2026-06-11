@@ -3,7 +3,7 @@ import Joi from "joi";
 import { query } from "../db.js";
 import { validate } from "../middleware/validate.js";
 import { auditLog } from "../services/auditService.js";
-import { assignOrderToRider } from "../services/orderAssignmentService.js";
+import { assignOrderToRider, dispatchOrderToRider } from "../services/orderAssignmentService.js";
 
 export const ordersRouter = express.Router();
 
@@ -72,7 +72,13 @@ ordersRouter.post("/reject-order", validate(Joi.object({
     metadata: { reason: req.body.reason || null },
     requestId: req.requestId,
   });
-  res.json({ message: "ORDER_PASSED_TO_NEXT_RIDER", order: rows[0] });
+  const nextDispatch = await dispatchOrderToRider(rows[0]);
+  res.json({
+    message: "ORDER_PASSED_TO_NEXT_RIDER",
+    order: rows[0],
+    reassigned: nextDispatch.assigned,
+    nextRiderId: nextDispatch.riderId,
+  });
 });
 
 ordersRouter.post("/pickup-order", validate(Joi.object({

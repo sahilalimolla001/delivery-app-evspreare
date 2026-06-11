@@ -26,6 +26,7 @@ const state = {
 let ringAudioContext = null;
 let ringTimer = null;
 let ringingOrderId = null;
+let isPollingOrders = false;
 
 const ERROR_MESSAGES = {
   OTP_RATE_LIMITED: "Too many OTP attempts. Please wait and try again.",
@@ -200,19 +201,24 @@ function pendingAssignedOrder() {
 }
 
 function playRingTone() {
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContext) return;
-  ringAudioContext ||= new AudioContext();
-  const oscillator = ringAudioContext.createOscillator();
-  const gain = ringAudioContext.createGain();
-  oscillator.type = "sine";
-  oscillator.frequency.value = 880;
-  gain.gain.setValueAtTime(0.001, ringAudioContext.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.18, ringAudioContext.currentTime + 0.03);
-  gain.gain.exponentialRampToValueAtTime(0.001, ringAudioContext.currentTime + 0.45);
-  oscillator.connect(gain).connect(ringAudioContext.destination);
-  oscillator.start();
-  oscillator.stop(ringAudioContext.currentTime + 0.5);
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    ringAudioContext ||= new AudioContext();
+    if (ringAudioContext.state === "suspended") ringAudioContext.resume();
+    const oscillator = ringAudioContext.createOscillator();
+    const gain = ringAudioContext.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.value = 880;
+    gain.gain.setValueAtTime(0.001, ringAudioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.18, ringAudioContext.currentTime + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, ringAudioContext.currentTime + 0.45);
+    oscillator.connect(gain).connect(ringAudioContext.destination);
+    oscillator.start();
+    oscillator.stop(ringAudioContext.currentTime + 0.5);
+  } catch (_error) {
+    // Some browsers block audio until user interaction; the visual popup still works.
+  }
 }
 
 function stopOrderRing() {
@@ -253,6 +259,14 @@ async function loadDashboardData() {
     if (error.message.includes("login") || error.message.includes("expired")) clearSession();
     state.message = error.message;
   }
+}
+
+async function pollDashboardData() {
+  if (!state.token || state.pendingApproval || isPollingOrders) return;
+  isPollingOrders = true;
+  await loadDashboardData();
+  render();
+  isPollingOrders = false;
 }
 
 async function goToDashboard() {
@@ -322,7 +336,7 @@ function orderOfferModal() {
       <div class="modal">
         <div class="modal-head">
           <div>
-            <span class="ring-pill">Ringing</span>
+            <span class="ring-pill">Ringing until action</span>
             <h2>New Order</h2>
             <p class="subtle">${order.public_id || order.id}</p>
           </div>
@@ -678,6 +692,8 @@ async function handleOtpComplete() {
 }
 
 document.addEventListener("click", async (event) => {
+  if (ringAudioContext?.state === "suspended") ringAudioContext.resume().catch(() => {});
+
   const go = event.target.closest("[data-go]");
   if (go) {
     setScreen(go.dataset.go);
@@ -812,7 +828,5 @@ if (state.pendingApproval) state.current = "pendingApproval";
 render();
 
 setInterval(async () => {
-  if (!state.token || state.pendingApproval) return;
-  await loadDashboardData();
-  render();
-}, 15000);
+  await pollDashboardData();
+}, 5000);

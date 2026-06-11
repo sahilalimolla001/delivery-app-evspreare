@@ -170,7 +170,8 @@ h1 span { color: var(--blue); }
 .tabbar .active { color: var(--blue); }
 .tabbar b { font-size: 20px; line-height: 1; }
 
-.modal-dim { position: absolute; inset: 0; background: rgba(16,24,40,.7); display: grid; align-items: end; padding: 0 14px 16px; }
+.modal-dim { position: absolute; inset: 0; z-index: 20; background: rgba(16,24,40,.7); display: grid; align-items: end; padding: 0 14px 16px; }
+.order-offer { align-items: center; padding: 14px; }
 .modal { background: white; border-radius: 18px; padding: 18px; box-shadow: 0 25px 45px rgba(0,0,0,.28); }
 .modal-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .modal-head h2 { margin: 0 0 3px; color: var(--blue); font-size: 22px; }
