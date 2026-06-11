@@ -4,6 +4,7 @@ const path = require('path');
 
 const publicDir = __dirname;
 const port = Number(process.env.PORT || 8001);
+const host = process.env.HOST || '0.0.0.0';
 const allowedFiles = new Set(['/index.html', '/styles.css']);
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -17,6 +18,11 @@ function send(res, statusCode, body, headers = {}) {
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  if (url.pathname === '/health') {
+    send(res, 200, 'ok', { 'Content-Type': 'text/plain; charset=utf-8' });
+    return;
+  }
+
   const pathname = url.pathname === '/' ? '/index.html' : url.pathname;
 
   if (!allowedFiles.has(pathname)) {
@@ -39,6 +45,6 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(port, () => {
-  console.log(`Admin panel listening on ${port}`);
+server.listen(port, host, () => {
+  console.log(`Admin panel listening on ${host}:${port}`);
 });
