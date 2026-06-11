@@ -18,7 +18,7 @@ const schema = Joi.object({
   TRUST_PROXY: Joi.boolean().truthy("true").falsy("false").default(false),
   AUTO_MIGRATE: Joi.boolean().truthy("true").falsy("false").default(true),
   OTP_TTL_SECONDS: Joi.number().integer().min(60).max(900).default(300),
-  OTP_PROVIDER: Joi.string().valid("dev", "twilio").default("dev"),
+  OTP_PROVIDER: Joi.string().valid("dev", "twilio", "").allow("").default(""),
   TWILIO_ACCOUNT_SID: Joi.string().allow("").optional(),
   TWILIO_AUTH_TOKEN: Joi.string().allow("").optional(),
   TWILIO_VERIFY_SERVICE_SID: Joi.string().allow("").optional(),
@@ -34,7 +34,9 @@ if (error) {
   throw new Error(`Invalid environment configuration: ${error.message}`);
 }
 
-if (env.NODE_ENV === "production" && env.OTP_PROVIDER === "twilio") {
+const otpProvider = env.OTP_PROVIDER || (env.NODE_ENV === "production" ? "twilio" : "dev");
+
+if (env.NODE_ENV === "production" && otpProvider === "twilio") {
   const missingTwilio = [
     ["TWILIO_ACCOUNT_SID", env.TWILIO_ACCOUNT_SID],
     ["TWILIO_AUTH_TOKEN", env.TWILIO_AUTH_TOKEN],
@@ -56,7 +58,7 @@ export const config = {
   trustProxy: env.TRUST_PROXY,
   autoMigrate: env.AUTO_MIGRATE,
   otpTtlSeconds: env.OTP_TTL_SECONDS,
-  otpProvider: env.OTP_PROVIDER,
+  otpProvider,
   twilio: {
     accountSid: env.TWILIO_ACCOUNT_SID,
     authToken: env.TWILIO_AUTH_TOKEN,

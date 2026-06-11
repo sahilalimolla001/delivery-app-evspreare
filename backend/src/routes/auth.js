@@ -31,7 +31,12 @@ authRouter.post("/send-otp", otpLimiter, validate(Joi.object({
     if (error.message === "TWILIO_VERIFY_NOT_CONFIGURED") {
       return res.status(503).json({ error: "OTP_PROVIDER_NOT_CONFIGURED" });
     }
-    console.error("send_otp_failed", error);
+    console.error("send_otp_failed", {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      moreInfo: error.moreInfo,
+    });
     return res.status(502).json({ error: "OTP_DELIVERY_FAILED" });
   }
 });
@@ -115,7 +120,12 @@ authRouter.post("/verify-otp", otpLimiter, validate(Joi.object({
     if (error.message === "TWILIO_VERIFY_NOT_CONFIGURED") {
       return res.status(503).json({ error: "OTP_PROVIDER_NOT_CONFIGURED" });
     }
-    console.error("verify_otp_failed", error);
+    console.error("verify_otp_failed", {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      moreInfo: error.moreInfo,
+    });
     return res.status(502).json({ error: "OTP_VERIFICATION_FAILED" });
   }
   if (!ok) return res.status(401).json({ error: "INVALID_OTP" });

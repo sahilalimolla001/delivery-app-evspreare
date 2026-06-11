@@ -361,10 +361,13 @@ async function handleLoginContinue() {
   }
   setLoading(true);
   try {
-    await apiRequest("/send-otp", {
+    const otpResult = await apiRequest("/send-otp", {
       method: "POST",
       body: JSON.stringify({ phone: phoneWithCountry() }),
     });
+    if (otpResult.provider === "dev" && !otpResult.devOtp) {
+      throw new Error("OTP service is still in dev mode. Set OTP_PROVIDER=twilio on backend.");
+    }
     state.otp = [];
     state.current = "otp";
   } catch (error) {

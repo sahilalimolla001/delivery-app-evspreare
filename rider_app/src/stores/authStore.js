@@ -69,6 +69,9 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await authApi.sendOtp(normalizedPhone);
+      if (response.data?.provider === 'dev' && !response.data?.devOtp) {
+        throw new Error('OTP service is still in dev mode. Set OTP_PROVIDER=twilio on backend.');
+      }
       const challenge = {
         phone: normalizedPhone,
         devOtp: response.data?.devOtp || null,
