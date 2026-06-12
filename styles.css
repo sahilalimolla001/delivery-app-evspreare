@@ -298,6 +298,7 @@ h1 span { color: var(--blue); }
 
 body.dark { background: linear-gradient(135deg, #111827, #172033); }
 body.dark .phone, body.dark .statusbar, body.dark .app-screen, body.dark .modal, body.dark .card, body.dark .metric, body.dark .field, body.dark .secondary, body.dark .menu button, body.dark .menu .menu-row, body.dark .profile-card, body.dark .policy-card, body.dark .accepted-order-card { background: #151f31; color: #eef4ff; border-color: #2d3b51; }
+body.dark .workflow-title { background: #151f31; color: #eef4ff; border-color: #2d3b51; }
 body.dark .subtle, body.dark .brand-panel p { color: #9aa8bd; }
 body.dark .empty, body.dark .welcome-asset, body.dark .navigate-row { background: #111827; border-color: #2d3b51; }
 
@@ -358,14 +359,14 @@ body.dark .empty, body.dark .welcome-asset, body.dark .navigate-row { background
   overflow: hidden;
   box-shadow: 0 8px 20px rgba(16,24,40,.04);
 }
-.workflow-title { min-height: 58px; display: flex; align-items: center; gap: 12px; padding: 0 18px; border-bottom: 1px solid #e5e5e5; }
+.workflow-title { width: 100%; min-height: 58px; display: flex; align-items: center; gap: 12px; padding: 0 18px; border: 0; border-bottom: 1px solid #e5e5e5; background: white; text-align: left; }
 .workflow-title span { border-radius: 999px; padding: 7px 12px; background: #3f3f46; color: white; font-size: 12px; font-weight: 900; }
 .workflow-title b { flex: 1; font-size: 19px; }
 .workflow-title i { font-style: normal; color: #475467; font-size: 24px; font-weight: 900; }
 .workflow-card > p { margin: 18px 18px 12px; color: #7a7a85; line-height: 1.45; }
 .workflow-card h3 { margin: 20px 18px 8px; font-size: 20px; }
 .workflow-card .info-row { margin: 0 18px; }
-.compact-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; padding: 14px; }
+.compact-summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; padding: 14px; }
 .compact-summary div { padding: 4px 8px; border-right: 1px solid #e5e7eb; }
 .compact-summary div:last-child { border-right: 0; }
 .code-field { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; min-height: 64px; margin: 0 18px 20px; border-radius: 14px; background: #ff4b0b; padding: 8px; }

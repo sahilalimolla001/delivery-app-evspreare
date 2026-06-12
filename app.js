@@ -22,6 +22,11 @@ const state = {
   message: "",
   ordersTab: "completed",
   pickupCode: "",
+  detailOpen: {
+    verify: true,
+    pickup: false,
+    delivery: false,
+  },
 };
 
 let ringAudioContext = null;
@@ -679,35 +684,40 @@ function orderDetailPage() {
     ${messageBlock()}
     ${needsPickupCode ? `
       <article class="workflow-card">
-        <div class="workflow-title"><span>STEP 1</span><b>Verify pickup</b><i>^</i></div>
-        <p>Ask the warehouse/pickup staff for the code before marking this order picked up.</p>
-        <label class="code-field">
-          <input id="pickupCodeInput" inputmode="numeric" maxlength="6" placeholder="Code verification required" value="${state.pickupCode}">
-          <button id="verifyPickupCode" data-order-id="${order.id}">Verify</button>
-        </label>
+        <button class="workflow-title" data-toggle-section="verify"><span>STEP 1</span><b>Verify pickup</b><i>${state.detailOpen.verify ? "^" : "v"}</i></button>
+        ${state.detailOpen.verify ? `
+          <p>Ask the warehouse/pickup staff for the code before marking this order picked up.</p>
+          <label class="code-field">
+            <input id="pickupCodeInput" inputmode="numeric" maxlength="6" placeholder="Code verification required" value="${state.pickupCode}">
+            <button id="verifyPickupCode" data-order-id="${order.id}">Verify</button>
+          </label>
+        ` : ""}
       </article>
     ` : ""}
     <article class="workflow-card">
-      <div class="workflow-title"><b>Pickup Details</b><i>^</i></div>
-      <h3>${order.store_name || "Pickup location"}</h3>
-      <p>${order.store_address || "Pickup address"}</p>
-      <div class="workflow-actions">
-        <button>Maps</button>
-        <button>Call</button>
-      </div>
+      <button class="workflow-title" data-toggle-section="pickup"><b>Pickup Details</b><i>${state.detailOpen.pickup ? "^" : "v"}</i></button>
+      ${state.detailOpen.pickup ? `
+        <h3>${order.store_name || "Pickup location"}</h3>
+        <p>${order.store_address || "Pickup address"}</p>
+        <div class="workflow-actions">
+          <button>Maps</button>
+          <button>Call</button>
+        </div>
+      ` : ""}
     </article>
     <article class="workflow-card">
-      <div class="workflow-title"><b>Delivery Details</b><i>^</i></div>
-      <h3>${order.customer_address?.split(",")[0] || order.customer_name || "Drop location"}</h3>
-      <p>${order.customer_address || "Delivery address"}</p>
-      <div class="workflow-actions">
-        <button>Maps</button>
-        <button>Call</button>
-        <button>Chat</button>
-      </div>
+      <button class="workflow-title" data-toggle-section="delivery"><b>Delivery Details</b><i>${state.detailOpen.delivery ? "^" : "v"}</i></button>
+      ${state.detailOpen.delivery ? `
+        <h3>${order.customer_address?.split(",")[0] || order.customer_name || "Drop location"}</h3>
+        <p>${order.customer_address || "Delivery address"}</p>
+        <div class="workflow-actions">
+          <button>Maps</button>
+          <button>Call</button>
+          <button>Chat</button>
+        </div>
+      ` : ""}
     </article>
     <article class="workflow-card compact-summary">
-      <div><span>Rate</span><b>Rs 10/km</b></div>
       <div><span>Distance</span><b>${orderDistanceLabel(order)}</b></div>
       <div><span>Total earning</span><b>Rs ${earning}</b></div>
     </article>
@@ -804,6 +814,14 @@ async function handleOtpComplete() {
 
 document.addEventListener("click", async (event) => {
   if (ringAudioContext?.state === "suspended") ringAudioContext.resume().catch(() => {});
+
+  const sectionToggle = event.target.closest("[data-toggle-section]");
+  if (sectionToggle) {
+    const section = sectionToggle.dataset.toggleSection;
+    state.detailOpen[section] = !state.detailOpen[section];
+    render();
+    return;
+  }
 
   const go = event.target.closest("[data-go]");
   if (go) {
