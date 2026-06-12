@@ -661,27 +661,41 @@ function orderDetailPage() {
   const earning = orderEarning(order);
   const needsPickupCode = ["ASSIGNED", "GOING_TO_STORE", "ARRIVED_STORE"].includes(order.status);
   const canComplete = ["PICKED_UP", "GOING_TO_CUSTOMER", "ARRIVED_CUSTOMER"].includes(order.status);
+  const statusCopy = needsPickupCode ? "Pickup verification pending" : "Ready for delivery completion";
   return shell(`
     <div class="delivery-page-head">
       <div class="delivery-top-actions">
         <button class="circle-btn" data-go="dashboard">Menu</button>
         <button class="help-btn" data-go="support">Help</button>
       </div>
-      <span class="subtle">Deliver to</span>
+      <span class="status-chip">${statusCopy}</span>
       <h2>${order.customer_name || "Customer"}</h2>
       <p>#${order.public_id || order.external_order_id || order.id}</p>
+      <div class="quick-trip">
+        <div><span>Distance</span><b>${orderDistanceLabel(order)}</b></div>
+        <div><span>Earning</span><b>Rs ${earning}</b></div>
+      </div>
     </div>
     ${messageBlock()}
     ${needsPickupCode ? `
       <article class="workflow-card">
         <div class="workflow-title"><span>STEP 1</span><b>Verify pickup</b><i>^</i></div>
-        <p>Please enter the verification code from pickup point</p>
+        <p>Ask the warehouse/pickup staff for the code before marking this order picked up.</p>
         <label class="code-field">
           <input id="pickupCodeInput" inputmode="numeric" maxlength="6" placeholder="Code verification required" value="${state.pickupCode}">
           <button id="verifyPickupCode" data-order-id="${order.id}">Verify</button>
         </label>
       </article>
     ` : ""}
+    <article class="workflow-card">
+      <div class="workflow-title"><b>Pickup Details</b><i>^</i></div>
+      <h3>${order.store_name || "Pickup location"}</h3>
+      <p>${order.store_address || "Pickup address"}</p>
+      <div class="workflow-actions">
+        <button>Maps</button>
+        <button>Call</button>
+      </div>
+    </article>
     <article class="workflow-card">
       <div class="workflow-title"><b>Delivery Details</b><i>^</i></div>
       <h3>${order.customer_address?.split(",")[0] || order.customer_name || "Drop location"}</h3>
@@ -692,10 +706,10 @@ function orderDetailPage() {
         <button>Chat</button>
       </div>
     </article>
-    <article class="workflow-card">
-      <div class="workflow-title"><b>Trip & Earning</b><i>^</i></div>
-      <div class="info-row"><b>Distance</b><span>${orderDistanceLabel(order)}</span></div>
-      <div class="info-row"><b>Earning</b><span>Rs ${earning} at Rs 10/km</span></div>
+    <article class="workflow-card compact-summary">
+      <div><span>Rate</span><b>Rs 10/km</b></div>
+      <div><span>Distance</span><b>${orderDistanceLabel(order)}</b></div>
+      <div><span>Total earning</span><b>Rs ${earning}</b></div>
     </article>
     <button class="complete-btn ${canComplete ? "" : "disabled"}" id="completeDelivery" data-order-id="${order.id}" ${canComplete ? "" : "disabled"}>Delivery Complete</button>
   `, { className: "scroll delivery-workflow-screen" });

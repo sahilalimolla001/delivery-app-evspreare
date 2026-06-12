@@ -342,10 +342,15 @@ body.dark .empty, body.dark .welcome-asset, body.dark .navigate-row { background
 }
 .delivery-page-head { padding-top: 10px; }
 .delivery-page-head h2 { margin: 6px 0 4px; font-size: 30px; line-height: 1.05; }
-.delivery-page-head p { margin: 0; color: #8f8f99; font-size: 20px; font-weight: 800; border-bottom: 1px dashed #ddd; padding-bottom: 22px; }
+.delivery-page-head p { margin: 0; color: #8f8f99; font-size: 18px; font-weight: 800; }
 .delivery-top-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 44px; }
 .circle-btn { width: 54px; height: 54px; border-radius: 50%; background: white; color: #475467; box-shadow: 0 8px 18px rgba(16,24,40,.12); font-size: 11px; font-weight: 900; }
 .help-btn { height: 46px; border-radius: 999px; padding: 0 18px; background: white; color: #475467; box-shadow: 0 8px 18px rgba(16,24,40,.12); font-weight: 900; }
+.status-chip { display: inline-flex; min-height: 28px; align-items: center; border-radius: 999px; padding: 0 10px; background: #e7f8ef; color: #087443; font-size: 12px; font-weight: 900; }
+.quick-trip { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px dashed #ddd; }
+.quick-trip div { border: 1px solid rgba(221,221,221,.9); border-radius: 14px; background: rgba(255,255,255,.72); padding: 10px; }
+.quick-trip span, .compact-summary span { display: block; color: #8f8f99; font-size: 11px; font-weight: 800; margin-bottom: 4px; }
+.quick-trip b, .compact-summary b { color: #101828; font-size: 16px; }
 .workflow-card {
   border: 1px solid #ddd;
   border-radius: 20px;
@@ -360,11 +365,14 @@ body.dark .empty, body.dark .welcome-asset, body.dark .navigate-row { background
 .workflow-card > p { margin: 18px 18px 12px; color: #7a7a85; line-height: 1.45; }
 .workflow-card h3 { margin: 20px 18px 8px; font-size: 20px; }
 .workflow-card .info-row { margin: 0 18px; }
+.compact-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; padding: 14px; }
+.compact-summary div { padding: 4px 8px; border-right: 1px solid #e5e7eb; }
+.compact-summary div:last-child { border-right: 0; }
 .code-field { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; min-height: 64px; margin: 0 18px 20px; border-radius: 14px; background: #ff4b0b; padding: 8px; }
 .code-field input { min-width: 0; border: 0; outline: 0; background: transparent; color: white; padding: 0 12px; font-size: 18px; font-weight: 900; }
 .code-field input::placeholder { color: rgba(255,255,255,.9); }
 .code-field button { height: 46px; border-radius: 10px; padding: 0 14px; background: white; color: #ff4b0b; font-weight: 900; }
 .workflow-actions { display: flex; gap: 10px; padding: 18px; }
 .workflow-actions button { height: 42px; border-radius: 999px; padding: 0 18px; border: 1px solid #f05a1a; background: white; color: #f05a1a; font-weight: 900; }
-.complete-btn { min-height: 58px; border-radius: 14px; background: #ff4b0b; color: white; font-size: 20px; font-weight: 900; margin-top: auto; }
+.complete-btn { min-height: 58px; border-radius: 14px; background: #ff4b0b; color: white; font-size: 20px; font-weight: 900; margin-top: auto; box-shadow: 0 12px 22px rgba(255,75,11,.22); }
 .complete-btn.disabled { background: #e5e7eb; color: #8f8f99; }
