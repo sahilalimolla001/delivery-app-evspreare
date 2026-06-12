@@ -27,6 +27,8 @@ const state = {
     pickup: false,
     delivery: false,
   },
+  riderLocation: null,
+  locationError: "",
 };
 
 let ringAudioContext = null;
@@ -236,6 +238,77 @@ function orderEarning(order) {
   return distance == null ? 0 : Math.round(distance * 10);
 }
 
+function orderDestination(order) {
+  const goingToPickup = ["ASSIGNED", "GOING_TO_STORE", "ARRIVED_STORE"].includes(order.status);
+  const latitude = Number(goingToPickup ? order.store_latitude : order.customer_latitude);
+  const longitude = Number(goingToPickup ? order.store_longitude : order.customer_longitude);
+  return Number.isFinite(latitude) && Number.isFinite(longitude) ? { latitude, longitude } : null;
+}
+
+function mapsDirectionUrl(order) {
+  const destination = orderDestination(order);
+  if (!destination) return "";
+  const origin = state.riderLocation
+    ? `${state.riderLocation.latitude},${state.riderLocation.longitude}`
+    : "";
+  const params = new URLSearchParams({
+    api: "1",
+    destination: `${destination.latitude},${destination.longitude}`,
+    travelmode: "driving",
+  });
+  if (origin) params.set("origin", origin);
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+function osmEmbedUrl(order) {
+  const destination = orderDestination(order);
+  if (!destination) return "";
+  const points = [destination];
+  if (state.riderLocation) points.push(state.riderLocation);
+  const lats = points.map((point) => point.latitude);
+  const lngs = points.map((point) => point.longitude);
+  const south = Math.min(...lats) - 0.02;
+  const north = Math.max(...lats) + 0.02;
+  const west = Math.min(...lngs) - 0.02;
+  const east = Math.max(...lngs) + 0.02;
+  const marker = state.riderLocation || destination;
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${west},${south},${east},${north}&layer=mapnik&marker=${marker.latitude},${marker.longitude}`;
+}
+
+function routeEmbedUrl(order) {
+  const destination = orderDestination(order);
+  if (!destination) return "";
+  if (!state.riderLocation) return osmEmbedUrl(order);
+  const params = new URLSearchParams({
+    saddr: `${state.riderLocation.latitude},${state.riderLocation.longitude}`,
+    daddr: `${destination.latitude},${destination.longitude}`,
+    output: "embed",
+  });
+  return `https://maps.google.com/maps?${params.toString()}`;
+}
+
+function fetchRiderLocation() {
+  if (!navigator.geolocation) {
+    state.locationError = "Live location is not supported on this device.";
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      state.riderLocation = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      };
+      state.locationError = "";
+      if (state.current === "map") render();
+    },
+    () => {
+      state.locationError = "Allow location permission to show live rider route.";
+      if (state.current === "map") render();
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 },
+  );
+}
+
 function playRingTone() {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -331,6 +404,7 @@ function setScreen(name) {
     });
     return;
   }
+  if (name === "map") fetchRiderLocation();
   render();
 }
 
@@ -515,18 +589,17 @@ function routeScreen() {
   const name = goingToPickup ? (order.store_name || "Pickup location") : (order.customer_name || "Customer");
   const address = goingToPickup ? (order.store_address || "Pickup address") : (order.customer_address || "Delivery address");
   const action = goingToPickup ? "Reached pickup location" : "Reached customer location";
+  const mapUrl = routeEmbedUrl(order);
+  const directionUrl = mapsDirectionUrl(order);
   return shell(`
     <div class="live-map-screen">
-      <div class="map-art">
-        <div class="map-road main"></div>
-        <div class="map-road side"></div>
-        <div class="map-route"></div>
-        <span class="map-pin rider">R</span>
-        <span class="map-pin pickup">P</span>
+      <div class="real-map">
+        ${mapUrl ? `<iframe title="Live route map" src="${mapUrl}" loading="lazy"></iframe>` : `<div class="map-fallback">Location unavailable</div>`}
         <div class="map-actions">
           <button class="circle-btn" data-go="dashboard">Menu</button>
           <button class="help-btn" data-go="support">Help</button>
         </div>
+        <button class="locate-btn" id="refreshLocation">Live</button>
       </div>
       <div class="route-sheet">
         <span class="sheet-grabber"></span>
@@ -536,8 +609,9 @@ function routeScreen() {
             <h2>${name}</h2>
             <p>#${order.public_id || order.external_order_id || order.id}</p>
           </div>
-          <button class="maps-tile">Maps</button>
+          <a class="maps-tile" href="${directionUrl || "#"}" target="_blank" rel="noreferrer">Maps</a>
         </div>
+        ${state.locationError ? `<p class="location-warning">${state.locationError}</p>` : ""}
         <p class="route-address">${address}</p>
         <div class="quick-trip route-trip">
           <div><span>Distance</span><b>${orderDistanceLabel(order)}</b></div>
@@ -910,6 +984,11 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  if (event.target.id === "refreshLocation") {
+    fetchRiderLocation();
+    return;
+  }
+
   if (event.target.id === "acceptOrder") {
     try {
       stopOrderRing();
@@ -919,6 +998,7 @@ document.addEventListener("click", async (event) => {
       });
       await loadDashboardData();
       state.current = "map";
+      fetchRiderLocation();
       render();
     } catch (error) {
       state.message = error.message;
@@ -1054,4 +1134,5 @@ render();
 
 setInterval(async () => {
   await pollDashboardData();
+  if (state.current === "map") fetchRiderLocation();
 }, 5000);
