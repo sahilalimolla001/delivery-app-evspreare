@@ -340,6 +340,7 @@ body.dark .empty, body.dark .welcome-asset, body.dark .navigate-row { background
 .delivery-workflow-screen {
   background: linear-gradient(#f1edff 0 220px, #fff 220px);
   gap: 14px;
+  padding-bottom: 26px;
 }
 .delivery-page-head { padding-top: 10px; }
 .delivery-page-head h2 { margin: 6px 0 4px; font-size: 30px; line-height: 1.05; }
@@ -375,5 +376,29 @@ body.dark .empty, body.dark .welcome-asset, body.dark .navigate-row { background
 .code-field button { height: 46px; border-radius: 10px; padding: 0 14px; background: white; color: #ff4b0b; font-weight: 900; }
 .workflow-actions { display: flex; gap: 10px; padding: 18px; }
 .workflow-actions button { height: 42px; border-radius: 999px; padding: 0 18px; border: 1px solid #f05a1a; background: white; color: #f05a1a; font-weight: 900; }
-.complete-btn { min-height: 58px; border-radius: 14px; background: #ff4b0b; color: white; font-size: 20px; font-weight: 900; margin-top: auto; box-shadow: 0 12px 22px rgba(255,75,11,.22); }
+.complete-btn { flex-shrink: 0; min-height: 58px; border-radius: 14px; background: #ff4b0b; color: white; font-size: 20px; font-weight: 900; margin-top: auto; box-shadow: 0 12px 22px rgba(255,75,11,.22); }
 .complete-btn.disabled { background: #e5e7eb; color: #8f8f99; }
+
+.map-route-shell { padding: 0; overflow: hidden; background: #eef3f8; }
+.live-map-screen { position: relative; height: 100%; background: #eef3f8; }
+.map-art { position: absolute; inset: 0 0 220px; overflow: hidden; background:
+  linear-gradient(30deg, transparent 0 46%, rgba(120,145,165,.18) 47% 53%, transparent 54%),
+  linear-gradient(120deg, transparent 0 38%, rgba(120,145,165,.16) 39% 45%, transparent 46%),
+  #edf3f6; }
+.map-art::before { content: "RAJARHAT"; position: absolute; left: 40px; top: 155px; color: rgba(16,24,40,.62); font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+.map-road { position: absolute; background: #95a8ba; border-radius: 999px; }
+.map-road.main { left: -20px; right: -20px; top: 235px; height: 9px; transform: rotate(-3deg); }
+.map-road.side { left: 185px; top: 40px; width: 9px; height: 330px; transform: rotate(28deg); }
+.map-route { position: absolute; left: 174px; top: 108px; width: 138px; height: 182px; border-left: 8px solid #126df1; border-bottom: 8px solid #126df1; border-radius: 0 0 0 26px; transform: rotate(18deg); }
+.map-pin { position: absolute; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: white; font-size: 12px; font-weight: 900; box-shadow: 0 8px 14px rgba(16,24,40,.22); }
+.map-pin.rider { right: 54px; top: 236px; background: #1c8dff; border: 3px solid white; }
+.map-pin.pickup { left: 54px; top: 268px; background: #111827; }
+.map-actions { position: absolute; left: 22px; right: 22px; top: 58px; display: flex; justify-content: space-between; align-items: center; }
+.route-sheet { position: absolute; left: 0; right: 0; bottom: 0; min-height: 260px; max-height: 62%; overflow-y: auto; background: white; border-radius: 24px 24px 0 0; padding: 18px 22px 22px; box-shadow: 0 -12px 28px rgba(16,24,40,.12); }
+.sheet-grabber { display: block; width: 64px; height: 5px; border-radius: 99px; background: #d9dde5; margin: 0 auto 18px; }
+.route-sheet-head { display: grid; grid-template-columns: 1fr 78px; gap: 14px; align-items: start; padding-bottom: 16px; border-bottom: 1px dashed #ddd; }
+.route-sheet-head h2 { margin: 6px 0 4px; font-size: 26px; line-height: 1.05; }
+.route-sheet-head p { margin: 0; color: #8f8f99; font-size: 18px; font-weight: 800; }
+.maps-tile { height: 72px; border-radius: 12px; background: #126df1; color: white; font-size: 13px; font-weight: 900; }
+.route-address { margin: 22px 0; color: #4b5563; font-size: 18px; line-height: 1.45; font-weight: 650; }
+.route-trip { margin-bottom: 16px; }

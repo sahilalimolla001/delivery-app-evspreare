@@ -493,7 +493,7 @@ function dashboard() {
 function acceptedOrderCard(order) {
   const earning = orderEarning(order);
   return `
-    <button class="accepted-order-card" data-go="details">
+    <button class="accepted-order-card" data-go="map">
       <div>
         <span>Accepted Order</span>
         <strong>${order.public_id || order.id}</strong>
@@ -505,6 +505,48 @@ function acceptedOrderCard(order) {
       </div>
     </button>
   `;
+}
+
+function routeScreen() {
+  const order = acceptedOrder() || pendingAssignedOrder();
+  if (!order) return emptyWorkflow("Map", "No active route yet");
+  const goingToPickup = ["ASSIGNED", "GOING_TO_STORE", "ARRIVED_STORE"].includes(order.status);
+  const title = goingToPickup ? "Pickup from" : "Deliver to";
+  const name = goingToPickup ? (order.store_name || "Pickup location") : (order.customer_name || "Customer");
+  const address = goingToPickup ? (order.store_address || "Pickup address") : (order.customer_address || "Delivery address");
+  const action = goingToPickup ? "Reached pickup location" : "Reached customer location";
+  return shell(`
+    <div class="live-map-screen">
+      <div class="map-art">
+        <div class="map-road main"></div>
+        <div class="map-road side"></div>
+        <div class="map-route"></div>
+        <span class="map-pin rider">R</span>
+        <span class="map-pin pickup">P</span>
+        <div class="map-actions">
+          <button class="circle-btn" data-go="dashboard">Menu</button>
+          <button class="help-btn" data-go="support">Help</button>
+        </div>
+      </div>
+      <div class="route-sheet">
+        <span class="sheet-grabber"></span>
+        <div class="route-sheet-head">
+          <div>
+            <span class="subtle">${title}</span>
+            <h2>${name}</h2>
+            <p>#${order.public_id || order.external_order_id || order.id}</p>
+          </div>
+          <button class="maps-tile">Maps</button>
+        </div>
+        <p class="route-address">${address}</p>
+        <div class="quick-trip route-trip">
+          <div><span>Distance</span><b>${orderDistanceLabel(order)}</b></div>
+          <div><span>Earning</span><b>Rs ${orderEarning(order)}</b></div>
+        </div>
+        <button class="complete-btn" id="reachedPickup" data-order-id="${order.id}">${action}</button>
+      </div>
+    </div>
+  `, { className: "map-route-shell" });
 }
 
 function emptyWorkflow(title, message, back = "dashboard") {
@@ -631,7 +673,7 @@ const views = {
   pendingApproval,
   dashboard,
   orderPopup: dashboard,
-  map: () => emptyWorkflow("Map", "No active route yet"),
+  map: () => routeScreen(),
   details: () => orderDetailPage(),
   pickup: () => emptyWorkflow("Pickup", "No pickup assigned yet"),
   drop: () => emptyWorkflow("Delivery", "No delivery assigned yet"),
@@ -876,7 +918,7 @@ document.addEventListener("click", async (event) => {
         body: JSON.stringify({ orderId: event.target.dataset.orderId }),
       });
       await loadDashboardData();
-      state.current = "dashboard";
+      state.current = "map";
       render();
     } catch (error) {
       state.message = error.message;
@@ -921,6 +963,13 @@ document.addEventListener("click", async (event) => {
       state.message = error.message;
       render();
     }
+    return;
+  }
+
+  if (event.target.id === "reachedPickup") {
+    state.detailOpen.verify = true;
+    state.current = "details";
+    render();
     return;
   }
 
