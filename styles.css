@@ -393,5 +393,6 @@ body.dark .empty, body.dark .welcome-asset, body.dark .navigate-row { background
 .route-sheet-head p { margin: 0; color: #8f8f99; font-size: 18px; font-weight: 800; }
 .maps-tile { height: 72px; border-radius: 12px; background: #126df1; color: white; font-size: 13px; font-weight: 900; display: grid; place-items: center; text-decoration: none; }
 .location-warning { margin: 12px 0 0; color: #b54708; background: #fff7e6; border-radius: 10px; padding: 10px; font-size: 12px; font-weight: 800; }
+.location-note { margin: 12px 0 0; color: #075df4; background: #edf5ff; border-radius: 10px; padding: 10px; font-size: 12px; font-weight: 800; }
 .route-address { margin: 22px 0; color: #4b5563; font-size: 18px; line-height: 1.45; font-weight: 650; }
 .route-trip { margin-bottom: 16px; }

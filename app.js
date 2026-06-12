@@ -29,12 +29,14 @@ const state = {
   },
   riderLocation: null,
   locationError: "",
+  locationStatus: "",
 };
 
 let ringAudioContext = null;
 let ringTimer = null;
 let ringingOrderId = null;
 let isPollingOrders = false;
+let isFetchingLocation = false;
 
 const ERROR_MESSAGES = {
   OTP_RATE_LIMITED: "Too many OTP attempts. Please wait and try again.",
@@ -245,6 +247,30 @@ function orderDestination(order) {
   return Number.isFinite(latitude) && Number.isFinite(longitude) ? { latitude, longitude } : null;
 }
 
+function normalizedLocation(latitude, longitude, source = "gps") {
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat === 0 && lng === 0) return null;
+  return { latitude: lat, longitude: lng, source };
+}
+
+function currentLocationPayload() {
+  return {
+    latitude: state.riderLocation?.latitude || 0,
+    longitude: state.riderLocation?.longitude || 0,
+  };
+}
+
+function applyProfileLocation(profile) {
+  const location = normalizedLocation(profile?.latitude, profile?.longitude, "last_seen");
+  if (!location) return;
+  if (!state.riderLocation || state.riderLocation.source !== "gps") {
+    state.riderLocation = location;
+    state.locationStatus = "Using last saved rider location.";
+  }
+}
+
 function mapsDirectionUrl(order) {
   const destination = orderDestination(order);
   if (!destination) return "";
@@ -287,26 +313,47 @@ function routeEmbedUrl(order) {
   return `https://maps.google.com/maps?${params.toString()}`;
 }
 
-function fetchRiderLocation() {
+function fetchRiderLocation(options = {}) {
+  const { silent = false, force = false } = options;
+  if (isFetchingLocation && !force) return Promise.resolve(state.riderLocation);
+  const secureHost = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
+  if (!window.isSecureContext && !secureHost) {
+    state.locationError = "Live location needs HTTPS. Open secure app link and allow location permission.";
+    if (!silent && state.current === "map") render();
+    return Promise.resolve(state.riderLocation);
+  }
   if (!navigator.geolocation) {
     state.locationError = "Live location is not supported on this device.";
-    return;
+    if (!silent && state.current === "map") render();
+    return Promise.resolve(state.riderLocation);
   }
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      state.riderLocation = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      };
-      state.locationError = "";
-      if (state.current === "map") render();
-    },
-    () => {
-      state.locationError = "Allow location permission to show live rider route.";
-      if (state.current === "map") render();
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 },
-  );
+  isFetchingLocation = true;
+  state.locationStatus = "Fetching live rider location...";
+  if (!silent && state.current === "map") render();
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const location = normalizedLocation(position.coords.latitude, position.coords.longitude, "gps");
+        if (location) state.riderLocation = location;
+        state.locationError = "";
+        state.locationStatus = location ? "Live rider location active." : "";
+        isFetchingLocation = false;
+        if (state.current === "map") render();
+        resolve(state.riderLocation);
+      },
+      (error) => {
+        const denied = error.code === error.PERMISSION_DENIED;
+        state.locationError = denied
+          ? "Location permission blocked. Browser settings me location allow karke Live dabaye."
+          : "Live location fetch nahi ho raha. GPS on karke Live dabaye.";
+        state.locationStatus = state.riderLocation ? "Route is using last saved rider location." : "";
+        isFetchingLocation = false;
+        if (!silent && state.current === "map") render();
+        resolve(state.riderLocation);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
+    );
+  });
 }
 
 function playRingTone() {
@@ -358,6 +405,7 @@ async function loadDashboardData() {
       apiRequest("/orders").catch(() => ({ orders: [] })),
     ]);
     state.profile = profile;
+    applyProfileLocation(profile);
     state.online = Boolean(profile.online_status);
     state.earnings = {
       total: Number(earnings.total || 0),
@@ -404,7 +452,7 @@ function setScreen(name) {
     });
     return;
   }
-  if (name === "map") fetchRiderLocation();
+  if (name === "map") fetchRiderLocation({ force: true });
   render();
 }
 
@@ -612,6 +660,7 @@ function routeScreen() {
           <a class="maps-tile" href="${directionUrl || "#"}" target="_blank" rel="noreferrer">Maps</a>
         </div>
         ${state.locationError ? `<p class="location-warning">${state.locationError}</p>` : ""}
+        ${state.locationStatus && !state.locationError ? `<p class="location-note">${state.locationStatus}</p>` : ""}
         <p class="route-address">${address}</p>
         <div class="quick-trip route-trip">
           <div><span>Distance</span><b>${orderDistanceLabel(order)}</b></div>
@@ -970,9 +1019,10 @@ document.addEventListener("click", async (event) => {
       const nextOnline = !state.online;
       state.online = nextOnline;
       render();
+      if (nextOnline) await fetchRiderLocation({ silent: true, force: true });
       await apiRequest(nextOnline ? "/online" : "/offline", {
         method: "POST",
-        body: nextOnline ? JSON.stringify({ latitude: 0, longitude: 0 }) : undefined,
+        body: nextOnline ? JSON.stringify(currentLocationPayload()) : undefined,
       });
       await loadDashboardData();
       render();
@@ -985,7 +1035,7 @@ document.addEventListener("click", async (event) => {
   }
 
   if (event.target.id === "refreshLocation") {
-    fetchRiderLocation();
+    fetchRiderLocation({ force: true });
     return;
   }
 
@@ -998,7 +1048,7 @@ document.addEventListener("click", async (event) => {
       });
       await loadDashboardData();
       state.current = "map";
-      fetchRiderLocation();
+      fetchRiderLocation({ force: true });
       render();
     } catch (error) {
       state.message = error.message;
@@ -1031,8 +1081,7 @@ document.addEventListener("click", async (event) => {
         body: JSON.stringify({
           orderId: event.target.dataset.orderId,
           pickupCode: state.pickupCode,
-          latitude: 0,
-          longitude: 0,
+          ...currentLocationPayload(),
         }),
       });
       state.pickupCode = "";
@@ -1060,8 +1109,7 @@ document.addEventListener("click", async (event) => {
         body: JSON.stringify({
           orderId: event.target.dataset.orderId,
           otp: "000000",
-          latitude: 0,
-          longitude: 0,
+          ...currentLocationPayload(),
         }),
       });
       await loadDashboardData();

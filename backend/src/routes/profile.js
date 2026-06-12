@@ -6,9 +6,17 @@ export const profileRouter = express.Router();
 profileRouter.get("/profile", async (req, res) => {
   const { rows } = await query(
     `SELECT u.id, u.name, u.phone, u.email, r.id AS rider_id, r.rider_code, r.rating,
-            r.online_status, r.vehicle_number, r.approval_status
+            r.online_status, r.vehicle_number, r.approval_status,
+            latest.latitude AS latitude, latest.longitude AS longitude
      FROM users u
      LEFT JOIN riders r ON r.user_id = u.id
+     LEFT JOIN LATERAL (
+       SELECT latitude, longitude
+       FROM locations
+       WHERE rider_id = r.id
+       ORDER BY created_at DESC
+       LIMIT 1
+     ) latest ON true
      WHERE u.id = $1`,
     [req.auth.sub],
   );
