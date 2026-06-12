@@ -85,10 +85,24 @@ ordersRouter.post("/reject-order", validate(Joi.object({
 
 ordersRouter.post("/pickup-order", validate(Joi.object({
   orderId: Joi.string().uuid().required(),
+  pickupCode: Joi.string().pattern(/^\d{4,6}$/).required(),
   latitude: Joi.number().required(),
   longitude: Joi.number().required(),
 })), async (req, res) => {
   const rider = await getRider(req.auth.sub);
+  const { rows: existingOrders } = await query(
+    `SELECT id, public_id, external_order_id
+     FROM orders
+     WHERE id = $1
+       AND rider_id = $2
+       AND status IN ('GOING_TO_STORE', 'ARRIVED_STORE', 'ASSIGNED')`,
+    [req.body.orderId, rider.id],
+  );
+  const existingOrder = existingOrders[0];
+  if (!existingOrder) return res.status(409).json({ error: "ORDER_NOT_AVAILABLE" });
+  if (pickupVerificationCode(existingOrder) !== req.body.pickupCode) {
+    return res.status(400).json({ error: "PICKUP_CODE_INVALID" });
+  }
   const { rows } = await query(
     `UPDATE orders SET status = 'PICKED_UP', picked_up_at = now(), updated_at = now()
      WHERE id = $1
@@ -140,4 +154,10 @@ ordersRouter.post("/deliver-order", validate(Joi.object({
 async function getRider(userId) {
   const { rows } = await query("SELECT * FROM riders WHERE user_id = $1", [userId]);
   return rows[0];
+}
+
+function pickupVerificationCode(order) {
+  const reference = `${order.external_order_id || ""}${order.public_id || ""}${order.id || ""}`;
+  const digits = reference.replace(/\D/g, "");
+  return (digits || String(order.id).replace(/\D/g, "")).slice(-4).padStart(4, "0");
 }

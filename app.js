@@ -21,6 +21,7 @@ const state = {
   loading: false,
   message: "",
   ordersTab: "completed",
+  pickupCode: "",
 };
 
 let ringAudioContext = null;
@@ -40,6 +41,7 @@ const ERROR_MESSAGES = {
   RIDER_SIGNUP_FAILED: "Could not submit signup. Please try again.",
   AUTH_REQUIRED: "Please login again.",
   INVALID_TOKEN: "Session expired. Please login again.",
+  PICKUP_CODE_INVALID: "Pickup verification code is incorrect.",
 };
 
 const profileCards = [
@@ -657,17 +659,46 @@ function orderDetailPage() {
   const order = acceptedOrder() || pendingAssignedOrder();
   if (!order) return emptyWorkflow("Order Details", "No assigned order yet");
   const earning = orderEarning(order);
+  const needsPickupCode = ["ASSIGNED", "GOING_TO_STORE", "ARRIVED_STORE"].includes(order.status);
+  const canComplete = ["PICKED_UP", "GOING_TO_CUSTOMER", "ARRIVED_CUSTOMER"].includes(order.status);
   return shell(`
-    ${topbar("Order Details", "", "dashboard")}
-    <div class="card info-list">
-      <div class="info-row"><b>Status</b><span>${order.status}</span></div>
-      <div class="info-row"><b>Pickup</b><span>${order.store_name || "-"}<br>${order.store_address || ""}</span></div>
-      <div class="info-row"><b>Drop</b><span>${order.customer_name || "-"}<br>${order.customer_address || ""}</span></div>
+    <div class="delivery-page-head">
+      <div class="delivery-top-actions">
+        <button class="circle-btn" data-go="dashboard">Menu</button>
+        <button class="help-btn" data-go="support">Help</button>
+      </div>
+      <span class="subtle">Deliver to</span>
+      <h2>${order.customer_name || "Customer"}</h2>
+      <p>#${order.public_id || order.external_order_id || order.id}</p>
+    </div>
+    ${messageBlock()}
+    ${needsPickupCode ? `
+      <article class="workflow-card">
+        <div class="workflow-title"><span>STEP 1</span><b>Verify pickup</b><i>^</i></div>
+        <p>Please enter the verification code from pickup point</p>
+        <label class="code-field">
+          <input id="pickupCodeInput" inputmode="numeric" maxlength="6" placeholder="Code verification required" value="${state.pickupCode}">
+          <button id="verifyPickupCode" data-order-id="${order.id}">Verify</button>
+        </label>
+      </article>
+    ` : ""}
+    <article class="workflow-card">
+      <div class="workflow-title"><b>Delivery Details</b><i>^</i></div>
+      <h3>${order.customer_address?.split(",")[0] || order.customer_name || "Drop location"}</h3>
+      <p>${order.customer_address || "Delivery address"}</p>
+      <div class="workflow-actions">
+        <button>Maps</button>
+        <button>Call</button>
+        <button>Chat</button>
+      </div>
+    </article>
+    <article class="workflow-card">
+      <div class="workflow-title"><b>Trip & Earning</b><i>^</i></div>
       <div class="info-row"><b>Distance</b><span>${orderDistanceLabel(order)}</span></div>
       <div class="info-row"><b>Earning</b><span>Rs ${earning} at Rs 10/km</span></div>
-    </div>
-    ${tabbar("dashboard")}
-  `, { className: "scroll" });
+    </article>
+    <button class="complete-btn ${canComplete ? "" : "disabled"}" id="completeDelivery" data-order-id="${order.id}" ${canComplete ? "" : "disabled"}>Delivery Complete</button>
+  `, { className: "scroll delivery-workflow-screen" });
 }
 
 function render() {
@@ -839,6 +870,49 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  if (event.target.id === "verifyPickupCode") {
+    try {
+      await apiRequest("/pickup-order", {
+        method: "POST",
+        body: JSON.stringify({
+          orderId: event.target.dataset.orderId,
+          pickupCode: state.pickupCode,
+          latitude: 0,
+          longitude: 0,
+        }),
+      });
+      state.pickupCode = "";
+      await loadDashboardData();
+      state.current = "details";
+      render();
+    } catch (error) {
+      state.message = error.message;
+      render();
+    }
+    return;
+  }
+
+  if (event.target.id === "completeDelivery") {
+    try {
+      await apiRequest("/deliver-order", {
+        method: "POST",
+        body: JSON.stringify({
+          orderId: event.target.dataset.orderId,
+          otp: "000000",
+          latitude: 0,
+          longitude: 0,
+        }),
+      });
+      await loadDashboardData();
+      state.current = "dashboard";
+      render();
+    } catch (error) {
+      state.message = error.message;
+      render();
+    }
+    return;
+  }
+
   if (event.target.id === "logoutBtn") {
     stopOrderRing();
     clearSession();
@@ -886,6 +960,10 @@ document.addEventListener("input", (event) => {
   if (event.target.id === "signupVehicle") {
     state.signupVehicle = event.target.value.toUpperCase();
     event.target.value = state.signupVehicle;
+  }
+  if (event.target.id === "pickupCodeInput") {
+    state.pickupCode = event.target.value.replace(/\D/g, "").slice(0, 6);
+    event.target.value = state.pickupCode;
   }
 });
 
