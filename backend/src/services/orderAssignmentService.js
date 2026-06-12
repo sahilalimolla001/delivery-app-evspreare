@@ -128,3 +128,16 @@ export async function dispatchOrderToRider(order) {
     riderId: assignedOrder ? rider.id : null,
   };
 }
+
+export async function assignNextPendingOrderToRider(riderId) {
+  const { rows } = await query(
+    `SELECT id
+     FROM orders
+     WHERE status = 'PENDING'
+       AND rider_id IS NULL
+     ORDER BY created_at ASC
+     LIMIT 1`,
+  );
+  if (!rows[0]) return null;
+  return assignOrderToRider({ orderId: rows[0].id, riderId });
+}

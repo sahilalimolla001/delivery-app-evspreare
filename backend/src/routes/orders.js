@@ -3,7 +3,7 @@ import Joi from "joi";
 import { query } from "../db.js";
 import { validate } from "../middleware/validate.js";
 import { auditLog } from "../services/auditService.js";
-import { assignOrderToRider, dispatchOrderToRider } from "../services/orderAssignmentService.js";
+import { assignNextPendingOrderToRider, dispatchOrderToRider } from "../services/orderAssignmentService.js";
 
 export const ordersRouter = express.Router();
 
@@ -131,24 +131,11 @@ ordersRouter.post("/deliver-order", validate(Joi.object({
     metadata: { latitude: req.body.latitude, longitude: req.body.longitude },
     requestId: req.requestId,
   });
-  const nextOrder = rider.online_status ? await assignNextPendingOrder(rider.id) : null;
+  const nextOrder = rider.online_status ? await assignNextPendingOrderToRider(rider.id) : null;
   res.json({ order: rows[0], otpVerified: true, nextOrder });
 });
 
 async function getRider(userId) {
   const { rows } = await query("SELECT * FROM riders WHERE user_id = $1", [userId]);
   return rows[0];
-}
-
-async function assignNextPendingOrder(riderId) {
-  const { rows } = await query(
-    `SELECT id
-     FROM orders
-     WHERE status = 'PENDING'
-       AND rider_id IS NULL
-     ORDER BY created_at ASC
-     LIMIT 1`,
-  );
-  if (!rows[0]) return null;
-  return assignOrderToRider({ orderId: rows[0].id, riderId });
 }

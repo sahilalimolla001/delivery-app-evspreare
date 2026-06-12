@@ -2,6 +2,7 @@ import express from "express";
 import Joi from "joi";
 import { query } from "../db.js";
 import { validate } from "../middleware/validate.js";
+import { assignNextPendingOrderToRider } from "../services/orderAssignmentService.js";
 
 export const riderRouter = express.Router();
 
@@ -16,7 +17,10 @@ riderRouter.post("/online", validate(Joi.object({
     "INSERT INTO locations (rider_id, latitude, longitude) VALUES ($1, $2, $3)",
     [rider.id, req.body.latitude, req.body.longitude],
   );
-  res.json({ online: true });
+  const assignedOrder = rider.approval_status === "APPROVED"
+    ? await assignNextPendingOrderToRider(rider.id)
+    : null;
+  res.json({ online: true, assignedOrder });
 });
 
 riderRouter.post("/offline", async (req, res) => {
