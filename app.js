@@ -235,9 +235,22 @@ function orderDistanceLabel(order) {
   return distance == null ? "Distance calculating" : `${distance.toFixed(1)} km`;
 }
 
+function orderEtaLabel(order) {
+  const distance = orderDistanceKm(order);
+  if (distance == null) return "Time calculating";
+  const minutes = Math.max(1, Math.round((distance / 24) * 60));
+  return `${minutes} mins`;
+}
+
 function orderEarning(order) {
   const distance = orderDistanceKm(order);
   return distance == null ? 0 : Math.round(distance * 10);
+}
+
+function orderEarningRange(order) {
+  const earning = orderEarning(order);
+  if (!earning) return "Calculating";
+  return `Rs ${Math.max(10, earning - 2)} - Rs ${earning + 2}`;
 }
 
 function orderDestination(order) {
@@ -299,6 +312,27 @@ function osmEmbedUrl(order) {
   const east = Math.max(...lngs) + 0.02;
   const marker = state.riderLocation || destination;
   return `https://www.openstreetmap.org/export/embed.html?bbox=${west},${south},${east},${north}&layer=mapnik&marker=${marker.latitude},${marker.longitude}`;
+}
+
+function orderOfferMapUrl(order) {
+  const pickup = normalizedLocation(order.store_latitude, order.store_longitude, "pickup");
+  if (!pickup) return "";
+  if (state.riderLocation) {
+    const params = new URLSearchParams({
+      saddr: `${state.riderLocation.latitude},${state.riderLocation.longitude}`,
+      daddr: `${pickup.latitude},${pickup.longitude}`,
+      output: "embed",
+    });
+    return `https://maps.google.com/maps?${params.toString()}`;
+  }
+  const points = [pickup];
+  const lats = points.map((point) => point.latitude);
+  const lngs = points.map((point) => point.longitude);
+  const south = Math.min(...lats) - 0.025;
+  const north = Math.max(...lats) + 0.025;
+  const west = Math.min(...lngs) - 0.025;
+  const east = Math.max(...lngs) + 0.025;
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${west},${south},${east},${north}&layer=mapnik&marker=${pickup.latitude},${pickup.longitude}`;
 }
 
 function routeEmbedUrl(order) {
@@ -392,6 +426,7 @@ function updateOrderRing() {
   if (ringingOrderId === order.id) return;
   stopOrderRing();
   ringingOrderId = order.id;
+  fetchRiderLocation({ silent: true, force: true });
   playRingTone();
   ringTimer = setInterval(playRingTone, 1200);
 }
@@ -490,24 +525,31 @@ function orderOfferModal() {
   const order = pendingAssignedOrder();
   if (!order || !state.token || state.pendingApproval) return "";
   const distance = orderDistanceLabel(order);
-  const earning = orderEarning(order);
+  const earningRange = orderEarningRange(order);
+  const eta = orderEtaLabel(order);
+  const mapUrl = orderOfferMapUrl(order);
   return `
-    <div class="modal-dim order-offer">
-      <div class="modal">
-        <div class="modal-head">
-          <div>
-            <span class="ring-pill">Ringing until action</span>
-            <h2>New Order</h2>
-            <p class="subtle">${distance}</p>
-          </div>
-          <strong>Rs ${earning}</strong>
+    <div class="modal-dim order-offer new-order-map-offer">
+      <div class="offer-map-panel">
+        ${mapUrl ? `<iframe title="New order pickup map" src="${mapUrl}" loading="lazy"></iframe>` : `<div class="map-fallback">Pickup location unavailable</div>`}
+        <button class="offer-reject" id="rejectOrder" data-order-id="${order.id}">Reject <span aria-hidden="true">x</span></button>
+        <span class="offer-rider-dot"></span>
+        <span class="offer-pickup-pin">B</span>
+        <div class="offer-route-dots" aria-hidden="true"></div>
+      </div>
+      <div class="offer-sheet">
+        <div class="offer-service-bar">
+          <span>Quick Order</span>
+          <span class="offer-bag" aria-hidden="true"></span>
         </div>
-        <div class="route-row"><span>A</span><div><b>${order.store_name || "Pickup location"}</b><small>${order.store_address || "Pickup address"}</small></div></div>
-        <div class="payout"><span>Estimated earning</span><strong>Rs ${earning}</strong></div>
-        <div class="offer-actions">
-          <button class="secondary" id="rejectOrder" data-order-id="${order.id}">Reject</button>
-          <button class="primary" id="acceptOrder" data-order-id="${order.id}">Accept</button>
+        <span class="offer-label">Estimated earning</span>
+        <strong class="offer-earning">${earningRange}</strong>
+        <div class="offer-pickup-card">
+          <span class="pickup-caption">Pickup order</span>
+          <b>${order.store_name || "Pickup location"}</b>
+          <p>Time: ${eta} <i></i> Distance: ${distance}</p>
         </div>
+        <button class="offer-accept" id="acceptOrder" data-order-id="${order.id}">Accept order</button>
       </div>
     </div>
   `;
