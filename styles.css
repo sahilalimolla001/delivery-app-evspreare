@@ -161,6 +161,23 @@ h1 span { color: var(--blue); }
 .metric, .card { border: 1px solid var(--line); background: white; border-radius: 12px; padding: 14px; box-shadow: 0 10px 26px rgba(16, 24, 40, .05); }
 .metric strong { display: block; font-size: 18px; }
 .metric span { color: var(--muted); font-size: 11px; }
+.accepted-order-card {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  padding: 14px;
+  margin: 0 0 18px;
+  box-shadow: 0 10px 26px rgba(16, 24, 40, .06);
+}
+.accepted-order-card span, .accepted-order-card small { color: var(--muted); font-size: 11px; }
+.accepted-order-card strong { display: block; margin: 4px 0; color: var(--ink); font-size: 15px; }
+.accepted-order-card b { display: block; color: var(--blue); font-size: 14px; text-align: right; }
 .section-title { font-weight: 900; margin: 8px 0 12px; }
 .empty { height: 170px; display: grid; place-items: center; text-align: center; color: var(--muted); background: #f8fbff; border: 1px solid var(--line); border-radius: 12px; }
 .empty strong { color: var(--ink); display: block; margin: 8px 0 4px; }
@@ -280,7 +297,7 @@ h1 span { color: var(--blue); }
 .rail-btn.active { color: white; background: var(--blue); border-color: var(--blue); box-shadow: 0 12px 22px rgba(7,93,244,.22); }
 
 body.dark { background: linear-gradient(135deg, #111827, #172033); }
-body.dark .phone, body.dark .statusbar, body.dark .app-screen, body.dark .modal, body.dark .card, body.dark .metric, body.dark .field, body.dark .secondary, body.dark .menu button, body.dark .menu .menu-row, body.dark .profile-card, body.dark .policy-card { background: #151f31; color: #eef4ff; border-color: #2d3b51; }
+body.dark .phone, body.dark .statusbar, body.dark .app-screen, body.dark .modal, body.dark .card, body.dark .metric, body.dark .field, body.dark .secondary, body.dark .menu button, body.dark .menu .menu-row, body.dark .profile-card, body.dark .policy-card, body.dark .accepted-order-card { background: #151f31; color: #eef4ff; border-color: #2d3b51; }
 body.dark .subtle, body.dark .brand-panel p { color: #9aa8bd; }
 body.dark .empty, body.dark .welcome-asset, body.dark .navigate-row { background: #111827; border-color: #2d3b51; }
 

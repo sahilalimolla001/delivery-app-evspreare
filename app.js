@@ -200,6 +200,35 @@ function pendingAssignedOrder() {
   return state.orders.find((order) => order.status === "ASSIGNED") || null;
 }
 
+function acceptedOrder() {
+  return state.orders.find((order) => ["GOING_TO_STORE", "ARRIVED_STORE", "PICKED_UP", "GOING_TO_CUSTOMER", "ARRIVED_CUSTOMER"].includes(order.status)) || null;
+}
+
+function orderDistanceKm(order) {
+  const pickupLat = Number(order.store_latitude);
+  const pickupLng = Number(order.store_longitude);
+  const dropLat = Number(order.customer_latitude);
+  const dropLng = Number(order.customer_longitude);
+  if (![pickupLat, pickupLng, dropLat, dropLng].every(Number.isFinite)) return null;
+  const toRad = (value) => (value * Math.PI) / 180;
+  const earthKm = 6371;
+  const dLat = toRad(dropLat - pickupLat);
+  const dLng = toRad(dropLng - pickupLng);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(pickupLat)) * Math.cos(toRad(dropLat)) * Math.sin(dLng / 2) ** 2;
+  return earthKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function orderDistanceLabel(order) {
+  const distance = orderDistanceKm(order);
+  return distance == null ? "Distance calculating" : `${distance.toFixed(1)} km`;
+}
+
+function orderEarning(order) {
+  const distance = orderDistanceKm(order);
+  return distance == null ? 0 : Math.round(distance * 10);
+}
+
 function playRingTone() {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -331,6 +360,8 @@ function tabbar(active) {
 function orderOfferModal() {
   const order = pendingAssignedOrder();
   if (!order || !state.token || state.pendingApproval) return "";
+  const distance = orderDistanceLabel(order);
+  const earning = orderEarning(order);
   return `
     <div class="modal-dim order-offer">
       <div class="modal">
@@ -338,13 +369,12 @@ function orderOfferModal() {
           <div>
             <span class="ring-pill">Ringing until action</span>
             <h2>New Order</h2>
-            <p class="subtle">${order.public_id || order.id}</p>
+            <p class="subtle">${distance}</p>
           </div>
-          <strong>${Number(order.total_payout || 0).toFixed(2)}</strong>
+          <strong>Rs ${earning}</strong>
         </div>
-        <div class="route-row"><span>A</span><div><b>${order.store_name || "Warehouse"}</b><small>${order.store_address || "Pickup location"}</small></div></div>
-        <div class="route-row"><span>B</span><div><b>${order.customer_name || "Customer"}</b><small>${order.customer_address || "Delivery address"}</small></div></div>
-        <div class="payout"><span>${order.payment_method || "Payment"}</span><strong>Rs ${Number(order.payment_collect_amount || 0).toFixed(2)}</strong></div>
+        <div class="route-row"><span>A</span><div><b>${order.store_name || "Pickup location"}</b><small>${order.store_address || "Pickup address"}</small></div></div>
+        <div class="payout"><span>Estimated earning</span><strong>Rs ${earning}</strong></div>
         <div class="offer-actions">
           <button class="secondary" id="rejectOrder" data-order-id="${order.id}">Reject</button>
           <button class="primary" id="acceptOrder" data-order-id="${order.id}">Accept</button>
@@ -426,6 +456,7 @@ function otp() {
 function dashboard() {
   const completed = state.orders.filter((order) => order.status === "DELIVERED").length;
   const currentOrders = activeOrders();
+  const currentAcceptedOrder = acceptedOrder();
   return shell(`
     <div class="topbar">
       <button class="icon-btn">Menu</button>
@@ -443,12 +474,30 @@ function dashboard() {
       <div class="metric"><strong>${state.online ? "Live" : "Off"}</strong><span>Status</span></div>
       <div class="metric"><strong>${currentOrders.length}</strong><span>Current</span></div>
     </div>
+    ${currentAcceptedOrder ? acceptedOrderCard(currentAcceptedOrder) : ""}
     <div class="section-title">New Order</div>
     <div class="empty">
       <div><div class="bag-icon">Box</div><strong>${currentOrders[0] ? "Order in progress" : "No new orders"}</strong><span>${currentOrders[0] ? currentOrders[0].status : (state.online ? "Waiting for assignment" : "Go online to receive orders")}</span></div>
     </div>
     ${tabbar("dashboard")}
   `);
+}
+
+function acceptedOrderCard(order) {
+  const earning = orderEarning(order);
+  return `
+    <button class="accepted-order-card" data-go="details">
+      <div>
+        <span>Accepted Order</span>
+        <strong>${order.public_id || order.id}</strong>
+        <small>${order.store_name || "Pickup"} -> ${order.customer_name || "Customer"}</small>
+      </div>
+      <div>
+        <b>${orderDistanceLabel(order)}</b>
+        <small>Rs ${earning}</small>
+      </div>
+    </button>
+  `;
 }
 
 function emptyWorkflow(title, message, back = "dashboard") {
@@ -576,7 +625,7 @@ const views = {
   dashboard,
   orderPopup: dashboard,
   map: () => emptyWorkflow("Map", "No active route yet"),
-  details: () => emptyWorkflow("Order Details", "No assigned order yet"),
+  details: () => orderDetailPage(),
   pickup: () => emptyWorkflow("Pickup", "No pickup assigned yet"),
   drop: () => emptyWorkflow("Delivery", "No delivery assigned yet"),
   earnings,
@@ -603,6 +652,23 @@ const views = {
   grievance: () => policyPage("grievance"),
   conduct: () => policyPage("conduct"),
 };
+
+function orderDetailPage() {
+  const order = acceptedOrder() || pendingAssignedOrder();
+  if (!order) return emptyWorkflow("Order Details", "No assigned order yet");
+  const earning = orderEarning(order);
+  return shell(`
+    ${topbar("Order Details", "", "dashboard")}
+    <div class="card info-list">
+      <div class="info-row"><b>Status</b><span>${order.status}</span></div>
+      <div class="info-row"><b>Pickup</b><span>${order.store_name || "-"}<br>${order.store_address || ""}</span></div>
+      <div class="info-row"><b>Drop</b><span>${order.customer_name || "-"}<br>${order.customer_address || ""}</span></div>
+      <div class="info-row"><b>Distance</b><span>${orderDistanceLabel(order)}</span></div>
+      <div class="info-row"><b>Earning</b><span>Rs ${earning} at Rs 10/km</span></div>
+    </div>
+    ${tabbar("dashboard")}
+  `, { className: "scroll" });
+}
 
 function render() {
   screen.innerHTML = views[state.current]();
